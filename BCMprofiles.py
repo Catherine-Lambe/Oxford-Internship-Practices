@@ -1,18 +1,18 @@
-__all__ = ("stellar_profile")
+__all__ = ("StellarProfile")
 
 import numpy as np
 import pyccl as ccl
 import matplotlib.pyplot as plt
 from scipy import signal
 
-class stellar_profile(ccl.halos.profiles.profile_base.HaloProfile): 
+class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile): 
     """Creating a class for the stellar density profile
     where: """  # could put in the equations used
 
     def __init__(self, mass_def):
-        super(stellar_profile, self).__init__(mass_def=mass_def)
+        super(StellarProfile, self).__init__(mass_def=mass_def)
 
-    def _real(self, r, M, centre_pt='None', # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
+    def _real(self, r, M, centre_pt=None, # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
               scale_a=1): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
