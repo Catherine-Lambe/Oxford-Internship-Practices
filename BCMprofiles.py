@@ -251,12 +251,13 @@ class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
 
+        self.cosmo = cosmo
         self.beta = beta
         self.M_c = M_c
         self.M_star = M_star
         self.A_star = A_star
         self.sigma_star = sigma_star
-        self.f_bar_b = cosmo['Omega_b']/cosmo['Omega_m']
+        self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
         
     def _f_stell(self, M):
         f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
