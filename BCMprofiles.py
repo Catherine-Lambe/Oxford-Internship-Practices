@@ -202,7 +202,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
 
 class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
-    """Text
+    """ Combined profile of ejected & bound gas, assuming $f_{bd} + f_{ej} = 1$
     """
 
     def __init__(self, cosmo, mass_def, concentration, gamma, GammaRange = (1.01, 10), nGamma=64, qrange=(1e-4, 1e2), nq=64):
@@ -229,5 +229,5 @@ class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         f_ej = 1 - f_bd
         prof_ej = self.ejProfile._fourier(k, M, scale_a)
         prof_bd = self.boundProfile._fourier(k, M, scale_a)
-        profile = f_ej*prof_ej + f_bd*prof_bd
+        profile = f_ej*prof_ej + f_bd*prof_bd[0]
         return profile
