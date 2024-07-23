@@ -10,7 +10,10 @@ from pyccl._core import UnlockInstance
 
 class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile): 
     """Creating a class for the stellar density profile
-    where: """  # could put in the equations used
+    where: $\rho_*(r)\ = Ma ^{-3} g_*(r)\$ & $g_*(r)\ \equiv \delta^D$(**x**) (a Dirac delta funciton centred at $r=0$). 
+    The normalised Fourier profile is then given by: $\tilde{g}_*(k)\ = 1$.
+    
+    """  
 
     def __init__(self, mass_def):
         super(StellarProfile, self).__init__(mass_def=mass_def)
@@ -89,7 +92,18 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
 class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
     """Creating a class for the bound gas density profile
-    where: """  # could put in the equations used
+    where: $\rho_b(r)\ = Ma ^{-3}$ & $g_b(r)\ = \frac{1}{V_b} \left( \frac{log(1 + \frac{r}{r_s})}{\frac{r}{r_s}} \right)^{\frac{1}{\Gamma - 1}}     $ , where $log \equiv ln$.    
+    $V_b \equiv 4\pi r_s^3 I_b(\frac{1}{\Gamma - 1}, 0)\ $.   
+    $I_b(\gamma, q)\ = \int^{\infty}_0 dx\ x^2 \left( \frac{log(1+x)}{x} \right)^{\gamma} j_0(qx)\ $, with $ q = kr_s $ [in Fourier space].   
+    $\to I_b(\frac{1}{\Gamma - 1}, 0)\ = \int^{\infty}_0 dx\ x^2 \left( \frac{log(1+x)}{x} \right)^{\frac{1}{\Gamma - 1}} j_0(0)\  = \int^{\infty}_0 dx\ x^2 \left( \frac{log(1+x)}{x} \right)^{\frac{1}{\Gamma - 1}}$   
+    As $j_0 $ is a Besel function, & $j_0(0)\ = 1 $.
+
+    Therefore:   
+    $\rho_x(r)\ = \frac{M f_x\ }{4\pi r_s^3 a^{3}} \frac{1}{\int^{\infty}_0 dx\ x^2 \left( \frac{log(1+x)}{x} \right)^{\frac{1}{\Gamma - 1}}} \left( \frac{log(1 + \frac{r}{r_s})}{\frac{r}{r_s}} \right)^{\frac{1}{\Gamma - 1}} $.
+    
+    The normalised Fourier profile is then given by: $\tilde{g}_b(k)\ = \frac{I_b(1/(\Gamma - 1),q)\ }{I_b(1/(\Gamma - 1),0)\ } $ , with $q = kr_s$
+    
+    """  
 
     def __init__(self, cosmo, mass_def, concentration, gamma, GammaRange = (1.01, 10), nGamma=64, qrange=(1e-4, 1e2), nq=64): 
         self.gamma = gamma
@@ -202,7 +216,9 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
 
 class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
-    """ Combined profile of ejected & bound gas, assuming $f_{bd} + f_{ej} = 1$
+    """ Combined profile of ejected & bound gas, assuming $f_{bd} + f_{ej} = 1$.
+
+    
     """
 
     def __init__(self, cosmo, mass_def, concentration, gamma, GammaRange = (1.01, 10), nGamma=64, qrange=(1e-4, 1e2), nq=64):
@@ -234,6 +250,8 @@ class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
 class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
     """Combined profile for the stellar & ejected & bound gas components, with the assumption that $f_c = 0$ & $f_{ej} + f_* + f_{bd} = 1$.      (even though $\bar{f}_b does not actually = 1).
+
+    
     """
 
     def __init__(self, cosmo, mass_def, concentration, gamma, GammaRange = (1.01, 10), nGamma=64, qrange=(1e-4, 1e2), nq=64,
@@ -309,7 +327,18 @@ class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         return prof_array
 
 class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile): 
-    """Text
+    """Combined profile for the stellar & ejected & bound gas & cdm components (ie- The BCM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the cold dark matter (cdm) component.
+
+    $f_c + f_b + f_e + f_* = 1$ 
+    & (assuming adiabaticity) $f_b + f_e + f_* = \bar{f}_b \equiv \frac{\Omega_b}{\Omega_M}$
+
+    For cold dark matter: $f_c\ = 1 - \bar{f}_b$.
+    For the stellar component: $f_*(M)\ = A_*\ \exp{\left[ -\frac{1}{2} \left( \frac{\log_{10}(M/M_*)}{\sigma_*} \right)^2 \right]}$,
+    with default parameters of: $A_* = 0.03$, $M_* = 10^{12.5}M_{\odot} $, & $\sigma_* = 1.2$.   
+    For the bound gas: $f_b(M)\ = \frac{\bar{f}_b - f_*(M)}{1 + (M_c/M)^{\beta}} $,      
+    with default parameter of: $M_c \simeq 10^{13.5 - 14} M_{\odot}$ & $\beta \sim 0.6$. 
+    For the ejected gas: $f_e(M)\ = \bar{f}_b\ - f_b(M)\ - f_*(M)\ $.
+    
     """
 
     def __init__(self, cosmo, mass_def, concentration, gamma, GammaRange = (1.01, 10), nGamma=64, qrange=(1e-4, 1e2), nq=64,
