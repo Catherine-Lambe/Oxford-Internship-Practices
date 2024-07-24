@@ -39,7 +39,7 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
         M_use = np.atleast_1d(M)
 
         prefix = M_use / scale_a**3
-        prof = k_use[None,:] + prefix[:, None] * 1 # as g(k) = 1
+        prof = np.ones_like(k_use)[None,:] * prefix[:, None] # k_use[None,:] + prefix[:, None] * 1 # as g(k) = 1
 
         if np.ndim(k) == 0:
             prof = np.squeeze(prof, axis=-1)
