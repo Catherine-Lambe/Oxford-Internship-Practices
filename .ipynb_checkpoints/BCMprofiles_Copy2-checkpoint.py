@@ -15,14 +15,15 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """  
 
-    def __init__(self, mass_def, fourier_analytic=True):
+    def __init__(self, cosmo, mass_def, fourier_analytic=True):
         super(StellarProfile, self).__init__(mass_def=mass_def)
         self.fourier_analytic = fourier_analytic
+        self.cosmo = cosmo
         if fourier_analytic == True:
             self._fourier = self._fourier_analytic
 
-    def _real(self, r, M, centre_pt=None, # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
-              scale_a=1): 
+    def _real(self, cosmo, r, M, scale_a=1, centre_pt=None): 
+        # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
         len_r = len(r_use) 
@@ -62,7 +63,7 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         if fourier_analytic == True:
             self._fourier = self._fourier_analytic
 
-    def _real(self, r, M, delta=200, eta_b = 0.5, scale_a=1): 
+    def _real(self, cosmo, r, M, scale_a=1, delta=200, eta_b = 0.5): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a # halo virial radius
@@ -154,7 +155,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         func_normQ0 = interpol.interp1d(gamma_list, I0_array) 
         return func_normQ0
         
-    def _real(self, r, M, call_interp=True, scale_a=1): 
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
         
@@ -250,10 +251,10 @@ class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
 
-    def _real(self, r, M, f_bd=1, call_interp=True, scale_a=1):
+    def _real(self, cosmo, r, M, scale_a=1, f_bd=1, call_interp=True):
         f_ej = 1 - f_bd
-        prof_ej = self.ejProfile._real(r, M, scale_a) 
-        prof_bd = self.boundProfile._real(r, M, call_interp, scale_a) 
+        prof_ej = self.ejProfile._real(cosmo, r, M, scale_a) 
+        prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp) 
         profile = f_ej*prof_ej + f_bd*prof_bd
         return profile
 
@@ -275,7 +276,7 @@ class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         super(CombinedStellarGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, gamma=gamma)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
-        self.stellProfile = StellarProfile(mass_def=mass_def)
+        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def)
         self.fourier_analytic = fourier_analytic
         if fourier_analytic == True:
             self._fourier = self._fourier_analytic
@@ -304,13 +305,13 @@ class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
         return f_b, f_stell
 
-    def _real(self, r, M, call_interp=True, scale_a=1, centre_pt=None):
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None):
         f_bd, f_stell = self._f_bd(M)
         f_ej = 1 - f_stell - f_bd  
         
-        prof_ej = self.ejProfile._real(r, M, scale_a) # ejGas_profile._real(self, r, M, scale_a)
-        prof_bd = self.boundProfile._real(r, M, call_interp, scale_a) # boundGas_profile._real(self, r, M, call_interp, scale_a)
-        prof_stell = self.stellProfile._real(r, M, centre_pt, scale_a) # _real(self, r, M, centre_pt=None, scale_a=1): 
+        prof_ej = self.ejProfile._real(cosmo, r, M, scale_a) # ejGas_profile._real(self, r, M, scale_a)
+        prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp) # boundGas_profile._real(self, r, M, call_interp, scale_a)
+        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt) # _real(self, r, M, centre_pt=None, scale_a=1): 
 
         if np.shape(M) == ():
             prof_array = f_ej*prof_ej + f_bd*prof_bd + f_stell*prof_stell
@@ -364,7 +365,7 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
         super(CombinedAllBCMProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, gamma=gamma)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
-        self.stellProfile = StellarProfile(mass_def=mass_def)
+        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def)
         self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
         self.fourier_analytic = fourier_analytic
         if fourier_analytic == True:
@@ -396,13 +397,13 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
         f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
         return f_b, f_stell
 
-    def _real(self, r, M, call_interp=True, scale_a=1, centre_pt=None):
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None):
         f_bd, f_stell = self._f_bd(M)
         f_ej = self.f_bar_b - f_stell - f_bd
         
-        prof_ej = self.ejProfile._real(r, M, scale_a) # ejGas_profile._real(self, r, M, scale_a)
-        prof_bd = self.boundProfile._real(r, M, call_interp, scale_a) # boundGas_profile._real(self, r, M, call_interp, scale_a)
-        prof_stell = self.stellProfile._real(r, M, centre_pt, scale_a) # _real(self, r, M, centre_pt=None, scale_a=1): 
+        prof_ej = self.ejProfile._real(cosmo, r, M, scale_a) # ejGas_profile._real(self, r, M, scale_a)
+        prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp) # boundGas_profile._real(self, r, M, call_interp, scale_a)
+        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt) # _real(self, r, M, centre_pt=None, scale_a=1): 
         prof_cdm = self.cdmProfile._real(self.cosmo, r, M, scale_a) # _real(self, cosmo, r, M, a)
 
         if np.shape(M) == ():
