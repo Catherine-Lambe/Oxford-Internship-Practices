@@ -69,11 +69,9 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a # halo virial radius
         r_e = 0.375*r_vir*np.sqrt(delta)*eta_b # eta_b = a free parameter
         
-        prefix = M_use / (scale_a*r_e*np.sqrt(2*np.pi))**3    ## (1/(scale_a*np.sqrt(2*np.pi*r_e)))**3
+        prefix = M_use / (scale_a*r_e*np.sqrt(2*np.pi))**3  
         x = r_use[None, :] / r_e[:, None]
         prof = prefix[:, None] * np.exp(-(x**2)/2)
-
-        ###  prefix = M_use * (1/(scale_a*np.sqrt(2*np.pi)*r_e))**3
 
         if np.ndim(r) == 0:
             prof = np.squeeze(prof, axis=-1)
