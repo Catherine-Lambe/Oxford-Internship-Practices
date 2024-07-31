@@ -123,7 +123,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
-            print(fourier_analytic)
+        #    print(fourier_analytic)
 
         self.gammaRange = gammaRange
         self.ngamma = ngamma
