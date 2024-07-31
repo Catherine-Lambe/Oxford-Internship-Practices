@@ -213,8 +213,8 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
                 self._func_normQany = self._norm_interpol2()
 
         q_use = k_use[None, :]*r_s[:, None]
-        g0 = self._func_normQ0(Gamma)
-        gAny = self._func_normQany((Gamma, np.log(q_use)))
+        g0 = self._func_normQ0(1/(Gamma-1))
+        gAny = self._func_normQany((1/(Gamma-1), np.log(q_use)))
         g_k = gAny/g0 # self._func_normQany((Gamma, np.log(q_use))) / self._func_normQ0(Gamma) # = Ib_qAny / Ib_q0
 
         prefix = M_use / scale_a**3
