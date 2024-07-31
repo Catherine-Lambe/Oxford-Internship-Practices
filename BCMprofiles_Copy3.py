@@ -17,11 +17,11 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
     def __init__(self, cosmo, mass_def, fourier_analytic=True):
         super(StellarProfile, self).__init__(mass_def=mass_def)
-        self.fourier_analytic = fourier_analytic
         self.cosmo = cosmo
-        if fourier_analytic == True:
+        self.fourier_analytic = fourier_analytic
+        if fourier_analytic is True:
             self._fourier = self._fourier_analytic
-
+            
     def _real(self, cosmo, r, M, scale_a=1, centre_pt=None): 
         # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
         r_use = np.atleast_1d(r) 
@@ -60,9 +60,9 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         super(EjectedGasProfile, self).__init__(mass_def=mass_def)
         self.cosmo = cosmo
         self.fourier_analytic = fourier_analytic
-        if fourier_analytic == True:
+        if fourier_analytic is True:
             self._fourier = self._fourier_analytic
-
+            
     def _real(self, cosmo, r, M, scale_a=1, delta=200, eta_b = 0.5): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
@@ -123,8 +123,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
-        #    print(fourier_analytic)
-
+            
         self.gammaRange = gammaRange
         self.ngamma = ngamma
         self.limInt = limInt
@@ -368,7 +367,7 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
-
+            
         self.gammaRange = gammaRange
         self.ngamma = ngamma
         self.limInt = limInt
