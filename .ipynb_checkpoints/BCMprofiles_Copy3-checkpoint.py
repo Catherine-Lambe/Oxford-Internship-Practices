@@ -116,7 +116,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """  
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4)): 
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-5, 7E3)): # originally: limInt=(1E-4, 1E4)
         super(BoundGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.cosmo = cosmo
         
@@ -234,7 +234,7 @@ class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4)):
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-5, 7E3)):
         super(CombinedGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
@@ -270,7 +270,7 @@ class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-5, 7E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
         super(CombinedStellarGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
@@ -359,7 +359,7 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-5, 7E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
         super(CombinedAllBCMProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
