@@ -118,14 +118,16 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
     def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4)): 
         super(BoundGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
+        self.cosmo = cosmo
+        
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
-        self.cosmo = cosmo
+            print(fourier_analytic)
 
         self.gammaRange = gammaRange
         self.ngamma = ngamma
-
+        self.limInt = limInt
         self.qrange = qrange
         self.nq = nq
         
@@ -139,8 +141,8 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     def _innerInt(self, x, gam): 
         return x**2 * self._shape(x, gam)   
 
-    def _Vb_prefix(self, r_s=1):
-        vB1 = integrate.quad(self._innerInt,limInt[0], limInt[1], args = (1/(self.Gamma-1)))  
+    def _Vb_prefix(self, gam, r_s=1):
+        vB1 = integrate.quad(self._innerInt, self.limInt[0], self.limInt[1], args = gam)  
         vB2 = 4*np.pi*(r_s**3)*vB1[0]
         return vB2
 
@@ -148,7 +150,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         gamma_list = np.linspace(self.gammaRange[0], self.gammaRange[1], self.ngamma) 
         I0_array = np.zeros(self.ngamma)
         for i, g in enumerate(gamma_list):
-            I0_array[i] =  integrate.quad(self._innerInt, limInt[0], limInt[1], args = g)[0] 
+            I0_array[i] =  integrate.quad(self._innerInt, self.limInt[0], self.limInt[1], args = g)[0] 
         func_normQ0 = interpol.interp1d(gamma_list, I0_array) 
         return func_normQ0
         
@@ -162,7 +164,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
         if call_interp is False:
             print(call_interp)
-            vB_prefix = self._Vb_prefix(r_s)
+            vB_prefix = self._Vb_prefix(1/(Gamma-1), r_s)
         else:
             if self._func_normQ0 is None: # is instead of == here
                 with UnlockInstance(self):
@@ -190,8 +192,8 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
             
         for i, g in enumerate(gamma_list): 
             for j, q in enumerate(q_array): 
-                I0_array[i, j] =  integrate.quad(integralQany, limInt[0], limInt[1], args = g, weight = "sin", wvar=q)[0] / q
-            print(f'Qany = {100*(i+1)/self.nGamma:.3g}% through')
+                I0_array[i, j] =  integrate.quad(integralQany, self.limInt[0], self.limInt[1], args = g, weight = "sin", wvar=q)[0] / q
+            print(f'Qany = {100*(i+1)/self.ngamma:.3g}% through')
         func_normQany = interpol.RegularGridInterpolator((gamma_list, np.log(q_array)), I0_array)
         return func_normQany
     
@@ -211,7 +213,9 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
                 self._func_normQany = self._norm_interpol2()
 
         q_use = k_use[None, :]*r_s[:, None]
-        g_k = self._func_normQany((Gamma, np.log(q_use))) / self._func_normQ0(Gamma) # = Ib_qAny / Ib_q0
+        g0 = self._func_normQ0(Gamma)
+        gAny = self._func_normQany((Gamma, np.log(q_use)))
+        g_k = gAny/g0 # self._func_normQany((Gamma, np.log(q_use))) / self._func_normQ0(Gamma) # = Ib_qAny / Ib_q0
 
         prefix = M_use / scale_a**3
         prof = prefix[:, None] * g_k[None,:] 
@@ -230,7 +234,7 @@ class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64):
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4)):
         super(CombinedGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
@@ -240,6 +244,7 @@ class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
         self.gammaRange = gammaRange
         self.ngamma = ngamma
+        self.limInt = limInt
         self.qrange = qrange
         self.nq = nq
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
@@ -252,7 +257,7 @@ class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         profile = f_ej*prof_ej + f_bd*prof_bd
         return profile
 
-    def _fourier_analytic(self, k, M, scale_a=1, Gamma, f_bd = 1):
+    def _fourier_analytic(self, k, M, scale_a=1, Gamma=1.1, f_bd = 1):
         f_ej = 1 - f_bd
         prof_ej = self.ejProfile._fourier(k, M, scale_a)
         prof_bd = self.boundProfile._fourier(k, M, scale_a, Gamma)
@@ -265,7 +270,7 @@ class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
         super(CombinedStellarGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
@@ -277,6 +282,7 @@ class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.gammaRange = gammaRange
         self.ngamma = ngamma
         self.qrange = qrange
+        self.limInt = limInt
         self.nq = nq
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
@@ -353,7 +359,7 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-4, 1E4), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
         super(CombinedAllBCMProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
@@ -365,6 +371,7 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
         self.gammaRange = gammaRange
         self.ngamma = ngamma
+        self.limInt = limInt
         self.qrange = qrange
         self.nq = nq
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
@@ -409,7 +416,7 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
                 i+=1
         return prof_array
 
-    def _fourier_analytic(self, k, M, scale_a=1, Gamma):
+    def _fourier_analytic(self, k, M, scale_a=1, Gamma=1.1):
         f_bd, f_stell = self._f_bd(M)
         f_ej = self.f_bar_b - f_stell - f_bd
         
