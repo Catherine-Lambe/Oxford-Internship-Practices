@@ -116,9 +116,10 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """  
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3)): # originally: limInt=(1E-4, 1E4), then (1E-5, 7E3)
+    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3)): # originally: limInt=(1E-4, 1E4), then (1E-5, 7E3)
         super(BoundGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.cosmo = cosmo
+        self.Gamma = gamma
         
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
