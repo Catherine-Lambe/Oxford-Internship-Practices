@@ -30,7 +30,7 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
         f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
         return f_stell
 
-     def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None):
+     def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None, M_star=None, A_star=None, sigma_star=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
@@ -112,18 +112,33 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
         return f_b, f_stell
 
-     def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None):
+     def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
-        if cosmo is not None:
-            self.cosmo = cosmo
         if mass_def is not None:
             self.mass_def = mass_def
      #   if fourier_analytic is not None:
       #      self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
+        
+        if beta is not None:
+            self.beta = beta
+        if M_c is not None:
+            self.M_c = M_c
+        if M_star is not None:
+            self.M_star = M_star
+        if A_star is not None:
+            self.A_star = A_star
+        if sigma_star is not None:
+            self.sigma_star = sigma_star
+
+        if cosmo is not None and cosmo != self.cosmo:
+            self.cosmo = cosmo
+            self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
+            self.f_c = 1 - self.f_bar_b
+
 ########
             
     def _real(self, cosmo, r, M, scale_a=1, delta=200, eta_b = 0.5): 
@@ -183,9 +198,8 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """  
 
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3)): 
+    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2): 
         super(BoundGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
-        self.cosmo = cosmo
         self.Gamma = gamma
         
         self.fourier_analytic = fourier_analytic
@@ -201,21 +215,54 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self._func_normQ0 = None   # General normalised profile (for q=0, over Gamma)
         self._func_normQany = None
     
-     def update_parameters(self, cosmo=None, mass_def=None, Gamma=None, fourier_analytic=None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None):
+        self.cosmo = cosmo
+        self.beta = beta
+        self.M_c = M_c
+        self.M_star = M_star
+        self.A_star = A_star
+        self.sigma_star = sigma_star
+        
+        self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
+        self.f_c = 1 - self.f_bar_b
+        
+    def _f_stell(self, M):
+        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
+        return f_stell
+
+    def _f_bd(self, M):     #$f_b(M)\ = \frac{\bar{f}_b - f_*(M)}{1 + (M_c/M)^{\beta}} $
+        f_stell = self._f_stell(M)
+        f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
+        return f_b, f_stell
+    
+     def update_parameters(self, cosmo=None, mass_def=None, Gamma=None, fourier_analytic=None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
-        if cosmo is not None:
-            self.cosmo = cosmo
         if mass_def is not None:
             self.mass_def = mass_def
      #   if fourier_analytic is not None:
       #      self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:                           # Check re: this param
-            self._fourier = self._fourier_analytic
-        if Gamma is not None:
+        if fourier_analytic is True:
+            self._fourier = self._fourier_analytic    ## recheck this param/line
+        if Gamma is None:
             self.Gamma = Gamma
-            
+        
+        if beta is not None:
+            self.beta = beta
+        if M_c is not None:
+            self.M_c = M_c
+        if M_star is not None:
+            self.M_star = M_star
+        if A_star is not None:
+            self.A_star = A_star
+        if sigma_star is not None:
+            self.sigma_star = sigma_star
+
+        if cosmo is not None and cosmo != self.cosmo:
+            self.cosmo = cosmo
+            self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
+            self.f_c = 1 - self.f_bar_b
+
         # Check if we need to recompute the Fourier profile.
         re_normQ0 = False   
         re_normQany = False
@@ -281,8 +328,10 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
             if self._func_normQ0 is None: # is instead of == here
                 with UnlockInstance(self):
                     self._func_normQ0 = self._norm_interpol1() 
-            vB_prefix = 4*np.pi*(r_s**3)*self._func_normQ0(1/(self.Gamma-1))  
-        prefix = M_use * (1/scale_a**3) * (1/vB_prefix)
+            vB_prefix = 4*np.pi*(r_s**3)*self._func_normQ0(1/(self.Gamma-1))
+
+        f_bd, f_stell = self._f_bd(M)
+        prefix = f_bd * M_use * (1/scale_a**3) * (1/vB_prefix)
 
         x = r_use[None, :] / r_s[:, None]
         prof = prefix[:, None] * self._shape(x, 1/(self.Gamma-1)) 
@@ -329,7 +378,8 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         gAny = self._func_normQany((1/(self.Gamma-1), np.log(q_use)))
         g_k = gAny/g0 
 
-        prefix = M_use / scale_a**3
+        f_bd, f_stell = self._f_bd(M)
+        prefix = f_bd * M_use / scale_a**3
         prof = prefix[:, None] * g_k[None,:] 
 
         if np.ndim(k) == 0:
@@ -338,123 +388,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
             prof = np.squeeze(prof, axis=0)
 
         return prof
-    
 
-class CombinedGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
-    """ Combined profile of ejected & bound gas, assuming $f_{bd} + f_{ej} = 1$.
-
-    
-    """
-
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3)): 
-        super(CombinedGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
-        self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma)
-        self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
-
-        self.gammaRange = gammaRange
-        self.ngamma = ngamma
-        self.limInt = limInt
-        self.qrange = qrange
-        self.nq = nq
-        self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
-        self._func_normQany = None
-
-    def _real(self, cosmo, r, M, scale_a=1, f_bd=1, call_interp=True):
-        f_ej = 1 - f_bd
-        prof_ej = self.ejProfile._real(cosmo, r, M, scale_a) 
-        prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp) 
-        profile = f_ej*prof_ej + f_bd*prof_bd
-        return profile
-
-    def _fourier_analytic(self, k, M, scale_a=1, f_bd = 1):
-        f_ej = 1 - f_bd
-        prof_ej = self.ejProfile._fourier(k, M, scale_a)
-        prof_bd = self.boundProfile._fourier(k, M, scale_a)
-        profile = f_ej*prof_ej + f_bd*prof_bd[0]
-        return profile
-
-class CombinedStellarGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
-    """Combined profile for the stellar & ejected & bound gas components, with the assumption that $f_c = 0$ & $f_{ej} + f_* + f_{bd} = 1$.      (even though $\bar{f}_b does not actually = 1).
-
-    
-    """
-
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
-        super(CombinedStellarGasProfile, self).__init__(mass_def=mass_def, concentration=concentration, Gamma=Gamma)
-        self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
-        self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
-        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def)
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
-
-        self.gammaRange = gammaRange
-        self.ngamma = ngamma
-        self.qrange = qrange
-        self.limInt = limInt
-        self.nq = nq
-        self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
-        self._func_normQany = None
-
-        self.cosmo = cosmo
-        self.beta = beta
-        self.M_c = M_c
-        self.M_star = M_star
-        self.A_star = A_star
-        self.sigma_star = sigma_star
-        self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-        
-    def _f_stell(self, M):
-        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
-        return f_stell
-
-    def _f_bd(self, M):     #$f_b(M)\ = \frac{\bar{f}_b - f_*(M)}{1 + (M_c/M)^{\beta}} $
-        f_stell = self._f_stell(M)
-        f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
-        return f_b, f_stell
-
-    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None):
-        f_bd, f_stell = self._f_bd(M)
-        f_ej = 1 - f_stell - f_bd  
-        
-        prof_ej = self.ejProfile._real(cosmo, r, M, scale_a) 
-        prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp)
-        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt) 
-
-        if np.shape(M) == ():
-            prof_array = f_ej*prof_ej + f_bd*prof_bd + f_stell*prof_stell
-        else:
-            prof_array = np.zeros(len(M), dtype=object)
-            i = 0
-            for e, b, s in zip(f_ej, f_bd, f_stell): # should be same as: for mass in M
-                profile = e*prof_ej[i] + b*prof_bd[i] + s*prof_stell[i]
-                prof_array[i] = profile
-                i+=1
-        return prof_array 
-
-    def _fourier_analytic(self, k, M, scale_a=1, call_interp=True, centre_pt=None):
-        f_bd, f_stell = self._f_bd(M)
-        f_ej = 1 - f_stell - f_bd  
-        
-        prof_ej = self.ejProfile._fourier(k, M, scale_a)
-        prof_bd = self.boundProfile._fourier(k, M, scale_a)
-        prof_stell = self.stellProfile._fourier(k, M, scale_a) 
-
-        if np.shape(M) == ():
-            prof_array = f_ej*prof_ej + f_bd*prof_bd + f_stell*prof_stell
-        else:
-            prof_array = np.zeros(len(M), dtype=object)
-            i = 0
-            for e, b, s in zip(f_ej, f_bd, f_stell): 
-                profile = e*prof_ej[i] 
-                profile += b*prof_bd[0,i] 
-                profile += s*prof_stell[i]
-                prof_array[i] = profile
-                i+=1
-        return prof_array
 
 class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile): 
     """Combined profile for the stellar & ejected & bound gas & cdm components (ie- The BCM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the cold dark matter (cdm) component.
@@ -473,28 +407,28 @@ class CombinedAllBCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
     def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
         super(CombinedAllBCMProfile, self).__init__(mass_def=mass_def, concentration=concentration, Gamma=Gamma)
-        self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration)
-        self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def)
-        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def)
+        self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, gammaRange=gammaRange, ngamma=ngamma, qrange=qrange, nq=nq, limInt=limInt, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
+        self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
+        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
             
-        self.gammaRange = gammaRange
-        self.ngamma = ngamma
-        self.limInt = limInt
-        self.qrange = qrange
-        self.nq = nq
+ #       self.gammaRange = gammaRange
+  #      self.ngamma = ngamma
+   #     self.limInt = limInt
+    #    self.qrange = qrange
+     #   self.nq = nq
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
 
-        self.cosmo = cosmo
-        self.beta = beta
-        self.M_c = M_c
-        self.M_star = M_star
-        self.A_star = A_star
-        self.sigma_star = sigma_star
+  #      self.cosmo = cosmo
+ #       self.beta = beta
+  #      self.M_c = M_c
+   #     self.M_star = M_star
+    #    self.A_star = A_star
+     #   self.sigma_star = sigma_star
         
         self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
         self.f_c = 1 - self.f_bar_b
