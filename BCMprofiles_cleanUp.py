@@ -14,18 +14,10 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """
 
     def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
-        super(CombinedAllBCMProfile, self).__init__(mass_def=mass_def, concentration=concentration, Gamma=Gamma)
+        super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, Gamma=Gamma)
         
         self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
             
- #       self.gammaRange = gammaRange
-  #      self.ngamma = ngamma
-   #     self.limInt = limInt
-    #    self.qrange = qrange
-     #   self.nq = nq
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
 
