@@ -13,26 +13,48 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2,
-                
-                fourier_analytic=True, projected_analytic=False, cumul2d_analytic=False, truncated=True):
+    def __init__(self, cosmo, mass_def, concentration, fourier_analytic=True, projected_analytic=False, cumul2d_analytic=False, truncated=True):
         
         super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumuld2d_analytic, truncated=truncated)
-        
-      #  self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
+     #  self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
             
-
         self.cosmo = cosmo
         self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
         self.f_c = 1 - self.f_bar_b
+
+    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, fourier_analytic=None, projected_analytic=None, cumul2d_analytic=None, truncated=None):
+        """Update any of the parameters associated with this profile.
+        Any parameter set to ``None`` won't be updated.
+        """
+        if mass_def is not None:
+            self.mass_def = mass_def
+        if concentration is not None:
+            self.concentration = concentration
+        if fourier_analytic is not None and fourier_analytic is True:                   
+            self._fourier = self._fourier_analytic
+
+        # COULD ADD IN THESE FOR UPDATE PARS, BUT instead of self. have ccl.halos.profiles.nfw.HaloProfileNFW.
         
+ #       if projected_analytic is not None and projected_analytic is True and truncated is False:
+  #          self._projected = self._projected_analytic
+  #      if cumul2d_analytic is not None and cumul2d_analytic is True and truncated is False:
+   #         self._cumul2d = self._cumul2d_analytic
+  #      if truncated is not None and if truncated is True:
+   #         self.truncated = truncated
+
+        if cosmo is not None and cosmo != self.cosmo:
+            self.cosmo = cosmo
+            self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
+            self.f_c = 1 - self.f_bar_b
 
     def _real(self, cosmo, r, M, scale_a=1):
-        prof = self.f_c  * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
+        prof = self.f_c * ccl.halos.profiles.nfw.HaloProfileNFW._real(self.cosmo, r, M, scale_a)  
+                          # * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
         return prof
 
     def _fourier_analytic(self, k, M, scale_a=1):
-        prof = self.f_c * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
+        prof = self.f_c * ccl.halos.profiles.nfw.HaloProfileNFW._fourier(self.cosmo, k, M, scale_a)  
+                          # * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
         return prof
 
 class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile): 
@@ -65,7 +87,7 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
             self.cosmo = cosmo
         if mass_def is not None:
             self.mass_def = mass_def
-        if fourier_analytic is True:                    
+        if fourier_analytic is not None and fourier_analytic is True:                  
             self._fourier = self._fourier_analytic
 
         if M_star is not None:
@@ -115,7 +137,7 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     def __init__(self, cosmo, mass_def, fourier_analytic = True, beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2): 
         super(EjectedGasProfile, self).__init__(mass_def=mass_def)
         self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
+        if fourier_analytic is not None and True:
             self._fourier = self._fourier_analytic
 
         self.cosmo = cosmo
@@ -143,7 +165,7 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         """
         if mass_def is not None:
             self.mass_def = mass_def
-        if fourier_analytic is True:                   
+        if fourier_analytic is not None and fourier_analytic is True:                  
             self._fourier = self._fourier_analytic
         
         if beta is not None:
@@ -226,7 +248,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.Gamma = gamma
         
         self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
+        if fourier_analytic is not None and True:
             self._fourier = self._fourier_analytic
             
         self.gammaRange = gammaRange
@@ -263,7 +285,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         """
         if mass_def is not None:
             self.mass_def = mass_def
-        if fourier_analytic is True:
+        if fourier_analytic is not None and fourier_analytic is True: 
             self._fourier = self._fourier_analytic    
         if Gamma is None:
             self.Gamma = Gamma
