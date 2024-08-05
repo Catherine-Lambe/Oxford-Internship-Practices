@@ -1,4 +1,4 @@
-__all__ = ("StellarProfile", "EjectedGasProfile", "BoundGasProfile", "CDMProfile" , "CombinedAllBCMProfile")
+__all__ = ("StellarProfile", "EjectedGasProfile", "BoundGasProfile", "CDMProfile" , "BCMProfile", "CombinedAllBCMProfile")
 
 import numpy as np
 import pyccl as ccl
@@ -8,14 +8,14 @@ import scipy.integrate as integrate
 import scipy.interpolate as interpol
 from pyccl._core import UnlockInstance
 
-class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile): 
+class CDMProfile(ccl.halos.profiles.nfw.HaloProfileNFW): 
     """Density profile for the cold dark matter (cdm), using the Navarro-Frenk-White, multiplied by the cdm's mass fraction.
     
     """
 
     def __init__(self, cosmo, mass_def, concentration, fourier_analytic=True, projected_analytic=False, cumul2d_analytic=False, truncated=True):
         
-        super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumuld2d_analytic, truncated=truncated)
+        super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
      #  self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
             
         self.cosmo = cosmo
@@ -452,7 +452,7 @@ class BCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         # self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
-        self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumuld2d_analytic, truncated=truncated)
+        self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
 
         # do I need these?
         self.fourier_analytic = fourier_analytic
