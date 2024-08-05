@@ -16,7 +16,7 @@ class CDMProfile(ccl.halos.profiles.nfw.HaloProfileNFW):
     def __init__(self, cosmo, mass_def, concentration, fourier_analytic=True, projected_analytic=False, cumul2d_analytic=False, truncated=True):
         
         super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
-     #  self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
+        self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
             
         self.cosmo = cosmo
         self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
@@ -48,12 +48,14 @@ class CDMProfile(ccl.halos.profiles.nfw.HaloProfileNFW):
             self.f_c = 1 - self.f_bar_b
 
     def _real(self, cosmo, r, M, scale_a=1):
-        prof = self.f_c * ccl.halos.profiles.nfw.HaloProfileNFW._real(self.cosmo, r, M, scale_a)  
+        prof = self.f_c * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
+        # ccl.halos.profiles.nfw.HaloProfileNFW._real(cosmo=self.cosmo, r=r, M=M, a=scale_a)  
                           # * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
         return prof
 
     def _fourier_analytic(self, k, M, scale_a=1):
-        prof = self.f_c * ccl.halos.profiles.nfw.HaloProfileNFW._fourier(self.cosmo, k, M, scale_a)  
+        prof = self.f_c * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
+        #ccl.halos.profiles.nfw.HaloProfileNFW._fourier(cosmo=self.cosmo, k=k, M=M, a=scale_a)  
                           # * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
         return prof
 
@@ -245,7 +247,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
     def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2): 
         super(BoundGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
-        self.Gamma = gamma
+        self.Gamma = Gamma
         
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is not None and True:
@@ -446,14 +448,15 @@ class BCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
-        super(CombinedAllBCMProfile, self).__init__(mass_def=mass_def, concentration=concentration, Gamma=Gamma)
+    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, projected_analytic=False, cumul2d_analytic=False, truncated=True):
+        super(BCMProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, gammaRange=gammaRange, ngamma=ngamma, qrange=qrange, nq=nq, limInt=limInt, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         # self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
         self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
 
+        self.cosmo=cosmo
         # do I need these?
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
@@ -468,7 +471,7 @@ class BCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
         prof_ej = self.ejProfile._real(cosmo, r, M, scale_a) 
         prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp)
         prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt)
-        prof_cdm = self.cdmProfile._real(self.cosmo, r, M, scale_a) 
+        prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a) 
 
         if np.shape(M) == ():
             prof_array = prof_ej + prof_bd + prof_stell + prof_cdm 
@@ -487,14 +490,14 @@ class BCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
         prof_ej = self.ejProfile._fourier(k, M, scale_a, delta, eta_b)
         prof_bd = self.boundProfile._fourier(k, M, scale_a)
         prof_stell = self.stellProfile._fourier(k, M, scale_a)  
-        prof_cdm = self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
+        prof_cdm = self.cdmProfile._fourier(k, M, scale_a) 
 
         if np.shape(M) == ():
-            prof_array = prof_ej + prof_bd + prof_stell + prof_cdm 
+            prof_array = prof_ej + prof_bd[0] + prof_stell + prof_cdm 
         else:
             prof_array = np.zeros(len(M), dtype=object)
             i = 0
-            for e, b, s, c in zip(prof_ej, prof_bd, prof_stell, prof_cdm): # should be same as: for mass in M
+            for e, b, s, c in zip(prof_ej, prof_bd[0], prof_stell, prof_cdm): # should be same as: for mass in M
                 profile = e + b + s + c
                 prof_array[i] = profile
                 i+=1
