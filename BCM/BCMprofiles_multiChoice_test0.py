@@ -404,7 +404,7 @@ class BCMProfile(Initialiser):
         self._func_normQany = None
 
         
-    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None, no_fraction=False, choose_fracs={'e': 1, 'b': 1, 's': 1, 'c': 1}:
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None, no_fraction=False, choose_fracs={'ejected': 1, 'bound': 1, 'stellar': 1, 'cdm': 1}):
         #, prof_list['e','b','s','c']):
 
         # the mass fractions are now included in the individual profiles
@@ -413,15 +413,26 @@ class BCMProfile(Initialiser):
         prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt, no_fraction)
         prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
 
-        prof_dict = {'e': prof_ej, 'b': prof_bd, 's': prof_stell, 'c': prof_cdm}
+        prof_dict = {'ejected': prof_ej, 'bound': prof_bd, 'stellar': prof_stell, 'cdm': prof_cdm}
         
       #  print(no_fraction, choose_fracs)
         if no_fraction is True:
             print('no_fraction is True')
 
-            prof_array = 
-            for i in choose_fracs:
-                prof
+            chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
+            for i, key in enumerate(choose_fracs):
+                chosen_prof = prof_dict[key]*choose_fracs[key]
+                chosen_prof_array[i] = chosen_prof
+
+            if np.shape(M) == ():
+                prof_array = prof_ej + prof_bd + prof_stell + prof_cdm 
+            else:
+                prof_array = np.zeros(len(M), dtype=object)
+                i = 0
+                for e, b, s, c in zip(prof_ej, prof_bd, prof_stell, prof_cdm): # should be same as: for mass in M
+                    profile = e + b + s + c
+                    prof_array[i] = profile
+                    i+=1
 
             
             prof_ej = prof_ej*choose_fracs[0]
