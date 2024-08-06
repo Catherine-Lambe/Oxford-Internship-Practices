@@ -22,6 +22,7 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
+        print(fourier_analytic)
         self.Gamma = Gamma
 
         self.gammaRange = gammaRange
@@ -180,16 +181,17 @@ class StellarProfile(Initialiser):
         
     #    self.cosmo = cosmo
      #   self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
+  #      if fourier_analytic is True:
+   #         self._fourier = self._fourier_analytic
 
       #  self.M_star = M_star
        # self.A_star = A_star
        # self.sigma_star = sigma_star
         
-    def _f_stell(self, M):
-        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
-        return f_stell
+#    def _f_stell(self, M):
+ #       f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
+  #      return f_stell
+       # self._f_stell = super(StellarProfile, self)._f_stell(M)
 
     def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None, M_star=None, A_star=None, sigma_star=None):
         """Update any of the parameters associated with this profile.
@@ -216,7 +218,7 @@ class StellarProfile(Initialiser):
         M_use = np.atleast_1d(M)
         len_r = len(r_use) 
 
-        f_stell = self._f_stell(M_use)
+        f_stell = super(StellarProfile, self)._f_stell(M_use)
         prefix = f_stell * M_use / scale_a**3
         prof = prefix[:, None] * signal.unit_impulse(len_r, centre_pt)[None,:] # If centre_pt=None, defaults to index at the 0th element.
 
@@ -231,7 +233,7 @@ class StellarProfile(Initialiser):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
-        f_stell = self._f_stell(M_use)
+        f_stell = super(StellarProfile, self)._f_stell(M_use)
         prefix = f_stell * M_use / scale_a**3
         prof = np.ones_like(k_use)[None,:] * prefix[:, None] # k_use[None,:] + prefix[:, None] * 1 # as g(k) = 1
 
@@ -564,7 +566,7 @@ class BCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
         super(BCMProfile, self).__init__(mass_def=mass_def, concentration=concentration)
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, gammaRange=gammaRange, ngamma=ngamma, qrange=qrange, nq=nq, limInt=limInt, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
+        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         # self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
         self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
 
