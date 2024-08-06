@@ -167,50 +167,9 @@ class StellarProfile(Initialiser):
     """Creating a class for the stellar density profile
     where: $\\rho_*(r)\ = Ma ^{-3} g_*(r)\ $ & $g_*(r)\ \\equiv \\delta^D$(**x**) (a Dirac delta funciton centred at $r=0$). 
     The normalised Fourier profile is then given by: $\\tilde{g}_*(k)\ = 1$.
-    
+
+    Inherit __init__ , update_parameters, & _f_stell methods from Initialiser parent class.
     """ 
-
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic=True, M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
-        super(StellarProfile, self).__init__(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma,
-                                            fourier_analytic=fourier_analytic, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-
-     #   self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, 
-     #   gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), 
-     #   beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, 
-     #   projected_analytic=False, cumul2d_analytic=False, truncated=True
-        
-    #    self.cosmo = cosmo
-     #   self.fourier_analytic = fourier_analytic
-  #      if fourier_analytic is True:
-   #         self._fourier = self._fourier_analytic
-
-      #  self.M_star = M_star
-       # self.A_star = A_star
-       # self.sigma_star = sigma_star
-        
-#    def _f_stell(self, M):
- #       f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
-  #      return f_stell
-       # self._f_stell = super(StellarProfile, self)._f_stell(M)
-
-    def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None, M_star=None, A_star=None, sigma_star=None):
-        """Update any of the parameters associated with this profile.
-        Any parameter set to ``None`` won't be updated.
-        """
-        if cosmo is not None:
-            self.cosmo = cosmo
-        if mass_def is not None:
-            self.mass_def = mass_def
-        if fourier_analytic is not None and fourier_analytic is True:                  
-            self._fourier = self._fourier_analytic
-
-        if M_star is not None:
-            self.M_star = M_star
-        if A_star is not None:
-            self.A_star = A_star
-        if sigma_star is not None:
-            self.sigma_star = sigma_star
-########
             
     def _real(self, cosmo, r, M, scale_a=1, centre_pt=None): 
         # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
@@ -218,7 +177,7 @@ class StellarProfile(Initialiser):
         M_use = np.atleast_1d(M)
         len_r = len(r_use) 
 
-        f_stell = super(StellarProfile, self)._f_stell(M_use)
+        f_stell = self._f_stell(M_use) # super(StellarProfile, self)._f_stell(M_use)
         prefix = f_stell * M_use / scale_a**3
         prof = prefix[:, None] * signal.unit_impulse(len_r, centre_pt)[None,:] # If centre_pt=None, defaults to index at the 0th element.
 
