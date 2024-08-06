@@ -1,4 +1,4 @@
-__all__ = ("Initialiser", "StellarProfile", "EjectedGasProfile", "BoundGasProfile", "CDMProfile" , "BCMProfile", "CombinedAllBCMProfile")
+__all__ = ("Initialiser", "StellarProfile", "EjectedGasProfile", "BoundGasProfile", "CDMProfile" , "BCMProfile")
 
 import numpy as np
 import pyccl as ccl
@@ -9,7 +9,7 @@ import scipy.interpolate as interpol
 from pyccl._core import UnlockInstance
 
 class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
-    """ X
+    """ Contains the __init__ , update_parameters, _f_stell & _f_bd methods to be inherited.
     """
     
     def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, 
@@ -22,6 +22,7 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
+        self.truncated = truncated
         self.Gamma = Gamma
 
         self.gammaRange = gammaRange
@@ -42,6 +43,8 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
 
         self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
         self.f_c = 1 - self.f_bar_b
+
+        self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, truncated=truncated)         # have [truncated] nfw profile initialised for cdm here, for inheritence later
         
     def _f_stell(self, M):
         f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
@@ -54,18 +57,28 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
         f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
         return f_b, f_stell
 
-    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
+    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None, truncated=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
+        re_nfw = False # Check if we need to re-compute the [truncated] nfw profile for the cdm
         if mass_def is not None:
             self.mass_def = mass_def
+            re_nfw = True
         if concentration is not None:
             self.concentration = concentration
+            re_nfw = True
         if fourier_analytic is not None and fourier_analytic is True: 
             self._fourier = self._fourier_analytic    
+            re_nfw = True
+        if truncated is not None and truncated is True:
+            self.truncated = truncated
+            re_nfw = True
         if Gamma is not None:
             self.Gamma = Gamma
+
+        if re_nfw is True:
+            self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, truncated=truncated) 
         
         if beta is not None:
             self.beta = beta
@@ -105,110 +118,61 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
             re_normQany = True
             self.nq = nq
 
-        if re_normQ0 and (self._func_normQ0 is not None):
+        if re_normQ0 is True and (self._func_normQ0 is not None):
             self._func_normQ0 = self._norm_interpol1() 
-        if re_normQany and (self._func_normQany is not None):
+        if re_normQany is True and (self._func_normQany is not None):
             self._func_normQany = self._norm_interpol2()
-    
+            
 
-class CDMProfile(ccl.halos.profiles.nfw.HaloProfileNFW): 
+class CDMProfile(Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW): 
     """Density profile for the cold dark matter (cdm), using the Navarro-Frenk-White, multiplied by the cdm's mass fraction.
     
     """
 
-    def __init__(self, cosmo, mass_def, concentration, fourier_analytic=True, projected_analytic=False, cumul2d_analytic=False, truncated=True):
+ #   def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic=True, truncated=True):
+  #      super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, truncated=truncated)
+        #super(ccl.halos.profiles.nfw.HaloProfileNFW, self).__init__(Initialiser)
         
-        super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
-        self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
+  #      self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, truncated=truncated)
             
-        self.cosmo = cosmo
-        self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-        self.f_c = 1 - self.f_bar_b
+     #   self.cosmo = cosmo
+     #   self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
+      #  self.f_c = 1 - self.f_bar_b
+   #     self.Gamma = Gamma
 
-    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, fourier_analytic=None, projected_analytic=None, cumul2d_analytic=None, truncated=None):
-        """Update any of the parameters associated with this profile.
-        Any parameter set to ``None`` won't be updated.
-        """
-        if mass_def is not None:
-            self.mass_def = mass_def
-        if concentration is not None:
-            self.concentration = concentration
-        if fourier_analytic is not None and fourier_analytic is True:                   
-            self._fourier = self._fourier_analytic
+     #   self.update_parameters = Initialiser(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated).update_parameters
 
-        # COULD ADD IN THESE FOR UPDATE PARS, BUT instead of self. have ccl.halos.profiles.nfw.HaloProfileNFW.
-        
- #       if projected_analytic is not None and projected_analytic is True and truncated is False:
-  #          self._projected = self._projected_analytic
-  #      if cumul2d_analytic is not None and cumul2d_analytic is True and truncated is False:
-   #         self._cumul2d = self._cumul2d_analytic
-  #      if truncated is not None and if truncated is True:
-   #         self.truncated = truncated
+#    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, fourier_analytic=None, projected_analytic=None, cumul2d_analytic=None, truncated=None):
+ #       """Update any of the parameters associated with this profile.
+  #      Any parameter set to ``None`` won't be updated.
+   #     """
+    #    if mass_def is not None:
+     #       self.mass_def = mass_def
+      #  if concentration is not None:
+       #     self.concentration = concentration
+        #if fourier_analytic is not None and fourier_analytic is True:                   
+         #   self._fourier = self._fourier_analytic
 
-        if cosmo is not None and cosmo != self.cosmo:
-            self.cosmo = cosmo
-            self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-            self.f_c = 1 - self.f_bar_b
+#        if cosmo is not None and cosmo != self.cosmo:
+ #           self.cosmo = cosmo
+  #          self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
+   #         self.f_c = 1 - self.f_bar_b
 
     def _real(self, cosmo, r, M, scale_a=1):
         prof = self.f_c * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
-        # ccl.halos.profiles.nfw.HaloProfileNFW._real(cosmo=self.cosmo, r=r, M=M, a=scale_a)  
-                          # * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
         return prof
 
     def _fourier_analytic(self, k, M, scale_a=1):
         prof = self.f_c * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
-        #ccl.halos.profiles.nfw.HaloProfileNFW._fourier(cosmo=self.cosmo, k=k, M=M, a=scale_a)  
-                          # * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
         return prof
 
 class StellarProfile(Initialiser): 
     """Creating a class for the stellar density profile
     where: $\\rho_*(r)\ = Ma ^{-3} g_*(r)\ $ & $g_*(r)\ \\equiv \\delta^D$(**x**) (a Dirac delta funciton centred at $r=0$). 
     The normalised Fourier profile is then given by: $\\tilde{g}_*(k)\ = 1$.
-    
+
+    Inherit __init__ , update_parameters, & _f_stell methods from Initialiser parent class.
     """ 
-
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic=True, M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
-        super(StellarProfile, self).__init__(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma,
-                                            fourier_analytic=fourier_analytic, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-
-     #   self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, 
-     #   gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), 
-     #   beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, 
-     #   projected_analytic=False, cumul2d_analytic=False, truncated=True
-        
-    #    self.cosmo = cosmo
-     #   self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
-
-      #  self.M_star = M_star
-       # self.A_star = A_star
-       # self.sigma_star = sigma_star
-        
-    def _f_stell(self, M):
-        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
-        return f_stell
-
-    def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None, M_star=None, A_star=None, sigma_star=None):
-        """Update any of the parameters associated with this profile.
-        Any parameter set to ``None`` won't be updated.
-        """
-        if cosmo is not None:
-            self.cosmo = cosmo
-        if mass_def is not None:
-            self.mass_def = mass_def
-        if fourier_analytic is not None and fourier_analytic is True:                  
-            self._fourier = self._fourier_analytic
-
-        if M_star is not None:
-            self.M_star = M_star
-        if A_star is not None:
-            self.A_star = A_star
-        if sigma_star is not None:
-            self.sigma_star = sigma_star
-########
             
     def _real(self, cosmo, r, M, scale_a=1, centre_pt=None): 
         # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
@@ -216,7 +180,7 @@ class StellarProfile(Initialiser):
         M_use = np.atleast_1d(M)
         len_r = len(r_use) 
 
-        f_stell = self._f_stell(M_use)
+        f_stell = self._f_stell(M_use) # super(StellarProfile, self)._f_stell(M_use)
         prefix = f_stell * M_use / scale_a**3
         prof = prefix[:, None] * signal.unit_impulse(len_r, centre_pt)[None,:] # If centre_pt=None, defaults to index at the 0th element.
 
@@ -231,7 +195,7 @@ class StellarProfile(Initialiser):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
-        f_stell = self._f_stell(M_use)
+        f_stell = super(StellarProfile, self)._f_stell(M_use)
         prefix = f_stell * M_use / scale_a**3
         prof = np.ones_like(k_use)[None,:] * prefix[:, None] # k_use[None,:] + prefix[:, None] * 1 # as g(k) = 1
 
@@ -242,61 +206,12 @@ class StellarProfile(Initialiser):
 
         return prof
 
-class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
+class EjectedGasProfile(Initialiser): 
     """Creating a class for the ejected gas density profile
-    where: """  
+    where: 
+    
+    Inherits __init__ , update_parameters, _f_stell, & _f_bd from Initialiser. """  
 
-    def __init__(self, cosmo, mass_def, fourier_analytic = True, beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2): 
-        super(EjectedGasProfile, self).__init__(mass_def=mass_def)
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is not None and True:
-            self._fourier = self._fourier_analytic
-
-        self.cosmo = cosmo
-        self.beta = beta
-        self.M_c = M_c
-        self.M_star = M_star
-        self.A_star = A_star
-        self.sigma_star = sigma_star
-        
-        self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-        self.f_c = 1 - self.f_bar_b
-        
-    def _f_stell(self, M):
-        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
-        return f_stell
-
-    def _f_bd(self, M):     
-        f_stell = self._f_stell(M)
-        f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
-        return f_b, f_stell
-
-    def update_parameters(self, cosmo=None, mass_def=None, fourier_analytic=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
-        """Update any of the parameters associated with this profile.
-        Any parameter set to ``None`` won't be updated.
-        """
-        if mass_def is not None:
-            self.mass_def = mass_def
-        if fourier_analytic is not None and fourier_analytic is True:                  
-            self._fourier = self._fourier_analytic
-        
-        if beta is not None:
-            self.beta = beta
-        if M_c is not None:
-            self.M_c = M_c
-        if M_star is not None:
-            self.M_star = M_star
-        if A_star is not None:
-            self.A_star = A_star
-        if sigma_star is not None:
-            self.sigma_star = sigma_star
-
-        if cosmo is not None and cosmo != self.cosmo:
-            self.cosmo = cosmo
-            self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-            self.f_c = 1 - self.f_bar_b
-
-########
             
     def _real(self, cosmo, r, M, scale_a=1, delta=200, eta_b = 0.5): 
         r_use = np.atleast_1d(r) 
@@ -336,7 +251,7 @@ class EjectedGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
         return prof
 
-class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile): 
+class BoundGasProfile(Initialiser): 
     """Creating a class for the bound gas density profile where: 
     .. math::
         \\rho_b(r)\ = Ma ^{-3} & g_b(r)\ = \\frac{1}{V_b} \\left( \\frac{log(1 + \\frac{r}{r_s})}{\\frac{r}{r_s}} \\right)^{\\frac{1}{\\Gamma - 1}}     , where log \equiv ln.    
@@ -354,101 +269,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     \\tilde{g}_b(k)\ = \\frac{I_b(1/(\\Gamma - 1),q)\ }{I_b(1/(\\Gamma - 1),0)\ } , with q = kr_s.
     
     """  
-
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2): 
-        super(BoundGasProfile, self).__init__(mass_def=mass_def, concentration=concentration)
-        self.Gamma = Gamma
-        
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is not None and True:
-            self._fourier = self._fourier_analytic
-            
-        self.gammaRange = gammaRange
-        self.ngamma = ngamma
-        self.limInt = limInt
-        self.qrange = qrange
-        self.nq = nq
-        
-        self._func_normQ0 = None   # General normalised profile (for q=0, over Gamma)
-        self._func_normQany = None
     
-        self.cosmo = cosmo
-        self.beta = beta
-        self.M_c = M_c
-        self.M_star = M_star
-        self.A_star = A_star
-        self.sigma_star = sigma_star
-        
-        self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-        self.f_c = 1 - self.f_bar_b
-        
-    def _f_stell(self, M):
-        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
-        return f_stell
-
-    def _f_bd(self, M):     
-        f_stell = self._f_stell(M)
-        f_b = (self.f_bar_b - f_stell) / (1 + (self.M_c / M)**self.beta )
-        return f_b, f_stell
-    
-    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
-        """Update any of the parameters associated with this profile.
-        Any parameter set to ``None`` won't be updated.
-        """
-        if mass_def is not None:
-            self.mass_def = mass_def
-        if concentration is not None:
-            self.concentration = concentration
-        if fourier_analytic is not None and fourier_analytic is True: 
-            self._fourier = self._fourier_analytic    
-        if Gamma is not None:
-            self.Gamma = Gamma
-        
-        if beta is not None:
-            self.beta = beta
-        if M_c is not None:
-            self.M_c = M_c
-        if M_star is not None:
-            self.M_star = M_star
-        if A_star is not None:
-            self.A_star = A_star
-        if sigma_star is not None:
-            self.sigma_star = sigma_star
-
-        if cosmo is not None and cosmo != self.cosmo:
-            self.cosmo = cosmo
-            self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-            self.f_c = 1 - self.f_bar_b
-
-        # Check if we need to recompute the interpolators
-        re_normQ0 = False   
-        re_normQany = False
-        if limInt is not None and limInt != self.limInt:
-            re_normQ0 = True
-            re_normQany = True
-            self.limInt = nq
-        if gammaRange is not None and gammaRange != self.gammaRange:
-            re_normQ0 = True  
-            re_normQany = True
-            self.gammaRange = gammaRange
-        if ngamma is not None and gamma != self.ngamma:
-            re_normQ0 = True   
-            re_normQany = True
-            self.ngamma = ngamma
-        if qrange is not None and qrange != self.qrange:
-            re_normQany = True
-            self.qrange = qrange
-        if nq is not None and nq != self.nq:
-            re_normQany = True
-            self.nq = nq
-
-        if re_normQ0 and (self._func_normQ0 is not None):
-            self._func_normQ0 = self._norm_interpol1() 
-        if re_normQany and (self._func_normQany is not None):
-            self._func_normQany = self._norm_interpol2()
-
-########
-
     def _shape(self, x, gam):
         gam_use = np.atleast_1d(gam)
         return (np.log(1+x)/x)**gam_use
@@ -545,7 +366,7 @@ class BoundGasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
         return prof
 
-class BCMProfile(ccl.halos.profiles.profile_base.HaloProfile): 
+class BCMProfile(Initialiser): 
     """Combined profile for the stellar & ejected & bound gas & cdm components (ie- The BCM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the cold dark matter (cdm) component.
 
     $f_c + f_b + f_e + f_* = 1$ 
@@ -557,20 +378,22 @@ class BCMProfile(ccl.halos.profiles.profile_base.HaloProfile):
     For the bound gas: $f_b(M)\ = \frac{\bar{f}_b - f_*(M)}{1 + (M_c/M)^{\beta}} $,      
     with default parameter of: $M_c \simeq 10^{13.5 - 14} M_{\odot}$ & $\beta \sim 0.6$. 
     For the ejected gas: $f_e(M)\ = \bar{f}_b\ - f_b(M)\ - f_*(M)\ $.
-    
+
+    Inherits update_parameters , _f_stell & _f_bd from Initialiser.
     """
 
-    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, projected_analytic=False, cumul2d_analytic=False, truncated=True):
-        super(BCMProfile, self).__init__(mass_def=mass_def, concentration=concentration)
+    def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, truncated=True):
+        
+        super(BCMProfile, self).__init__(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, gammaRange=gammaRange, ngamma=ngamma, qrange=qrange, nq=nq, limInt=limInt, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star, truncated=truncated)
+        
         self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, gammaRange=gammaRange, ngamma=ngamma, qrange=qrange, nq=nq, limInt=limInt, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-        self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-        # self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration)
-        self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated)
+        self.ejProfile = EjectedGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
+        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
+        self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, truncated=truncated)
 
-        self.cosmo=cosmo
+   #     self.cosmo=cosmo
         # do I need these?
-        self.fourier_analytic = fourier_analytic
+   #     self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
             
