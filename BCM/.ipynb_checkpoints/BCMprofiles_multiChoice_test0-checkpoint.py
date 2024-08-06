@@ -132,7 +132,7 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
             
 
 class CDMProfile(Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW): 
-    """Density profile for the cold dark matter (cdm), using the Navarro-Frenk-White, multiplied by the cdm's mass fraction.
+    """Density profile for the cold dark matter (cdm), using the Navarro-Frenk-White, multiplied by the cdm's mass fraction (unless no_fraction is set to True in the real & analytical Fourier methods below).
     
     """
 
@@ -154,10 +154,15 @@ class CDMProfile(Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW):
 
 class StellarProfile(Initialiser): 
     """Creating a class for the stellar density profile
-    where: $\\rho_*(r)\ = Ma ^{-3} g_*(r)\ $ & $g_*(r)\ \\equiv \\delta^D$(**x**) (a Dirac delta funciton centred at $r=0$). 
-    The normalised Fourier profile is then given by: $\\tilde{g}_*(k)\ = 1$.
+    where: 
+    .. math::
+    
+        \\rho_*(r)\ = Ma ^{-3} g_*(r)\  & g_*(r)\ \\equiv \\delta^D(\\mathbf{x}) (\\text{a Dirac delta function centred at }r=0). 
+    The normalised Fourier profile is then given by: 
+    .. math::
+        \\tilde{g}_*(k)\ = 1.
 
-    Inherit __init__ , update_parameters, & _f_stell methods from Initialiser parent class.
+    Inherits __init__ , update_parameters, & _f_stell methods from Initialiser parent class.
     """ 
             
     def _real(self, cosmo, r, M, scale_a=1, centre_pt=None, no_fraction=False): 
@@ -251,21 +256,28 @@ class EjectedGasProfile(Initialiser):
 
 class BoundGasProfile(Initialiser): 
     """Creating a class for the bound gas density profile where: 
+    
     .. math::
-        \\rho_b(r)\ = Ma ^{-3} & g_b(r)\ = \\frac{1}{V_b} \\left( \\frac{log(1 + \\frac{r}{r_s})}{\\frac{r}{r_s}} \\right)^{\\frac{1}{\\Gamma - 1}}     , where log \equiv ln.    
+    
+        \\rho_b(r)\ = Ma ^{-3} & g_b(r)\ = \\frac{1}{V_b} \\left( \\frac{log(1 + \\frac{r}{r_s})}{\\frac{r}{r_s}} \\right)^{\\frac{1}{\\Gamma - 1}}     \\text{, where log} \equiv \\text{ ln.}    
         V_b \\equiv 4\\pi r_s^3 I_b(\\frac{1}{\\Gamma - 1}, 0)\ .   
-        I_b(\\gamma, q)\ = \\int^{\\infty}_0 dx\ x^2 \\left( \\frac{log(1+x)}{x} \\right)^{\\gamma} j_0(qx)\, with q = kr_s [in Fourier space].  
+        I_b(\\gamma, q)\ = \\int^{\\infty}_0 dx\ x^2 \\left( \\frac{log(1+x)}{x} \\right)^{\\gamma} j_0(qx)\, with q = kr_s \\text{[in Fourier space].}  
         \\to I_b(\\frac{1}{\\Gamma - 1}, 0)\ = \\int^{\\infty}_0 dx\ x^2 \\left( \\frac{log(1+x)}{x} \\right)^{\\frac{1}{\\Gamma - 1}} j_0(0)\  = \int^{\infty}_0 dx\ x^2 \left( \frac{log(1+x)}{x} \right)^{\frac{1}{\Gamma - 1}} 
-        As j_0 is a Besel function, & j_0(0)\ = 1 .
+        \\text{As } j_0 \\text{ is a Besel function, & } j_0(0)\ = 1 .
 
     Therefore: 
+    
     .. math::
+    
         \\rho_x(r)\ = \\frac{M f_x\ }{4\\pi r_s^3 a^{3}} \\frac{1}{\\int^{\\infty}_0 dx\ x^2 \\left( \\frac{log(1+x)}{x} \\right)^{\\frac{1}{\\Gamma - 1}}} \\left( \\frac{log(1 + \\frac{r}{r_s})}{\\frac{r}{r_s}} \\right)^{\\frac{1}{\\Gamma - 1}}.
     
     The normalised Fourier profile is then given by: 
-    .. math::
-    \\tilde{g}_b(k)\ = \\frac{I_b(1/(\\Gamma - 1),q)\ }{I_b(1/(\\Gamma - 1),0)\ } , with q = kr_s.
     
+    .. math::
+    
+        \\tilde{g}_b(k)\ = \\frac{I_b(1/(\\Gamma - 1),q)\ }{I_b(1/(\\Gamma - 1),0)\ } , with q = kr_s.
+
+    Inherits __init__ , update_parameters, _f_stell & _f_bd methods from Initialiser parent class.    
     """  
     
     def _shape(self, x, gam):
@@ -375,18 +387,20 @@ class BoundGasProfile(Initialiser):
 class BCMProfile(Initialiser): 
     """Combined profile for the stellar & ejected & bound gas & cdm components (ie- The BCM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the cold dark matter (cdm) component.
 
-    $f_c + f_b + f_e + f_* = 1$ 
-    & (assuming adiabaticity) $f_b + f_e + f_* = \bar{f}_b \equiv \frac{\Omega_b}{\Omega_M}$
-
-    For cold dark matter: $f_c\ = 1 - \bar{f}_b$.
-    For the stellar component: $f_*(M)\ = A_*\ \exp{\left[ -\frac{1}{2} \left( \frac{\log_{10}(M/M_*)}{\sigma_*} \right)^2 \right]}$,
-    with default parameters of: $A_* = 0.03$, $M_* = 10^{12.5}M_{\odot} $, & $\sigma_* = 1.2$.   
-    For the bound gas: $f_b(M)\ = \frac{\bar{f}_b - f_*(M)}{1 + (M_c/M)^{\beta}} $,      
-    with default parameter of: $M_c \simeq 10^{13.5 - 14} M_{\odot}$ & $\beta \sim 0.6$. 
-    For the ejected gas: $f_e(M)\ = \bar{f}_b\ - f_b(M)\ - f_*(M)\ $.
-
     Inherits update_parameters , _f_stell & _f_bd from Initialiser.
     """
+
+#    $f_c + f_b + f_e + f_* = 1$ 
+#    & (assuming adiabaticity) $f_b + f_e + f_* = \bar{f}_b \equiv \frac{\Omega_b}{\Omega_M}$
+
+#    For cold dark matter: $f_c\ = 1 - \bar{f}_b$.
+#    For the stellar component: $f_*(M)\ = A_*\ \exp{\left[ -\frac{1}{2} \left( \frac{\log_{10}(M/M_*)}{\sigma_*} \right)^2 \right]}$,
+#    with default parameters of: $A_* = 0.03$, $M_* = 10^{12.5}M_{\odot} $, & $\sigma_* = 1.2$.   
+#    For the bound gas: $f_b(M)\ = \frac{\bar{f}_b - f_*(M)}{1 + (M_c/M)^{\beta}} $,      
+#    with default parameter of: $M_c \simeq 10^{13.5 - 14} M_{\odot}$ & $\beta \sim 0.6$. 
+#    For the ejected gas: $f_e(M)\ = \bar{f}_b\ - f_b(M)\ - f_*(M)\ $.
+
+
 
     def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, delta=200, eta_b = 0.5, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, truncated=True):
         
@@ -415,7 +429,12 @@ class BCMProfile(Initialiser):
         prof_dict = {'ejected': prof_ej, 'bound': prof_bd, 'stellar': prof_stell, 'cdm': prof_cdm}
         
         if no_fraction is True:
-            print('no_fraction is True')
+            print("The chosen components with their respective mass fractions are: ", choose_fracs)
+            fraction_sum = 0
+            for i in choose_fracs:
+                fraction_sum += choose_fracs[i]
+            if fraction_sum != 1:
+                raise Exception("The mass fractions of the chosen components must sum up to 1 for normalisation.")
 
             chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
             for i, key in enumerate(choose_fracs):
@@ -430,16 +449,20 @@ class BCMProfile(Initialiser):
 
     def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False, choose_fracs={'ejected': 1, 'bound': 1, 'stellar': 1, 'cdm': 1}):
         
-        # the mass fractions are now included in the individual profiles
+        # the mass fractions are now included in the individual profiles, unless no_fraction=True
         prof_ej = self.ejProfile._fourier(k, M, scale_a, no_fraction)
         prof_bd = self.boundProfile._fourier(k, M, scale_a, no_fraction)
         prof_stell = self.stellProfile._fourier(k, M, scale_a, no_fraction)  
         prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
-
-        prof_dict = {'ejected': prof_ej, 'bound': prof_bd[0], 'stellar': prof_stell, 'cdm': prof_cdm}
         
         if no_fraction is True:
-            print('no_fraction is True')
+            prof_dict = {'ejected': prof_ej, 'bound': prof_bd[0], 'stellar': prof_stell, 'cdm': prof_cdm}
+            print("The chosen components with their respective mass fractions are: ", choose_fracs)
+            fraction_sum = 0
+            for i in choose_fracs:
+                fraction_sum += choose_fracs[i]
+            if fraction_sum != 1:
+                raise Exception("The mass fractions of the chosen components must sum up to 1 for normalisation.")
 
             chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
             for i, key in enumerate(choose_fracs):
