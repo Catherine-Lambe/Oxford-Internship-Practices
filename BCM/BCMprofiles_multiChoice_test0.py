@@ -402,8 +402,10 @@ class BCMProfile(Initialiser):
             
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
+
         
-    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None, no_fraction=False, choose_fracs=[1, 1, 1, 1]):
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None, no_fraction=False, choose_fracs={'e': 1, 'b': 1, 's': 1, 'c': 1}:
+        #, prof_list['e','b','s','c']):
 
         # the mass fractions are now included in the individual profiles
         prof_ej = self.ejProfile._real(cosmo, r, M, scale_a, no_fraction) 
@@ -411,28 +413,39 @@ class BCMProfile(Initialiser):
         prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt, no_fraction)
         prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
 
-        print(prof_ej, prof_bd, prof_stell, prof_cdm)
+        prof_dict = {'e': prof_ej, 'b': prof_bd, 's': prof_stell, 'c': prof_cdm}
         
-        print(no_fraction, choose_fracs)
+      #  print(no_fraction, choose_fracs)
         if no_fraction is True:
             print('no_fraction is True')
+
+            prof_array = 
+            for i in choose_fracs:
+                prof
+
+            
             prof_ej = prof_ej*choose_fracs[0]
             prof_bd = prof_bd*choose_fracs[1]
             prof_stell = prof_stell*choose_fracs[2]
             prof_cdm = prof_cdm*choose_fracs[3]
+
+            G
+
+            
         # to introduce ability to choose which profs to sum, & to take care of correct indexing when putting in the chosen fractions, could switch choose_fracs from a list to a dictionary
         # eg - choose_fracs = {'e': frac_ej, 'bd': frac_bd, 'stell': frac_stell, 'cdm': 'frac_cdm'}
         # could add another dict in pars, but this 1 gives the list of profs to sum
 
-        if np.shape(M) == ():
-            prof_array = prof_ej + prof_bd + prof_stell + prof_cdm 
         else:
-            prof_array = np.zeros(len(M), dtype=object)
-            i = 0
-            for e, b, s, c in zip(prof_ej, prof_bd, prof_stell, prof_cdm): # should be same as: for mass in M
-                profile = e + b + s + c
-                prof_array[i] = profile
-                i+=1
+            if np.shape(M) == ():
+                prof_array = prof_ej + prof_bd + prof_stell + prof_cdm 
+            else:
+                prof_array = np.zeros(len(M), dtype=object)
+                i = 0
+                for e, b, s, c in zip(prof_ej, prof_bd, prof_stell, prof_cdm): # should be same as: for mass in M
+                    profile = e + b + s + c
+                    prof_array[i] = profile
+                    i+=1
         return prof_array
 
     def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
