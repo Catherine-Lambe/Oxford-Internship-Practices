@@ -396,7 +396,7 @@ class BCMProfile(Initialiser):
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
         
-    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None, no_fraction=False, choose_fracs=[None, None, None, None]):
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None, no_fraction=False, choose_fracs=[1, 1, 1, 1]):
 
         # the mass fractions are now included in the individual profiles
         prof_ej = self.ejProfile._real(cosmo, r, M, scale_a, no_fraction) 
@@ -405,10 +405,13 @@ class BCMProfile(Initialiser):
         prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
 
         if no_fraction is True:
-             prof_ej = self.ejProfile._real(cosmo, r, M, scale_a, no_fraction) 
-            prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp, no_fraction)
-            prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt, no_fraction)
-            prof_cdm = prof_cdm
+            prof_ej = prof_ej*choose_fracs[0]
+            prof_bd = prof_bd*choose_fracs[1]
+            prof_stell = prof_stell*choose_fracs[2]
+            prof_cdm = prof_cdm*choose_fracs[3]
+        # to introduce ability to choose which profs to sum, & to take care of correct indexing when putting in the chosen fractions, could switch choose_fracs from a list to a dictionary
+        # eg - choose_fracs = {'e': frac_ej, 'bd': frac_bd, 'stell': frac_stell, 'cdm': 'frac_cdm'}
+        # could add another dict in pars, but this 1 gives the list of profs to sum
 
         if np.shape(M) == ():
             prof_array = prof_ej + prof_bd + prof_stell + prof_cdm 
@@ -428,6 +431,12 @@ class BCMProfile(Initialiser):
         prof_bd = self.boundProfile._fourier(k, M, scale_a, no_fraction)
         prof_stell = self.stellProfile._fourier(k, M, scale_a, no_fraction)  
         prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
+
+        if no_fraction is True:
+            prof_ej = prof_ej*choose_fracs[0]
+            prof_bd = prof_bd*choose_fracs[1]
+            prof_stell = prof_stell*choose_fracs[2]
+            prof_cdm = prof_cdm*choose_fracs[3]
 
         if np.shape(M) == ():
             prof_array = prof_ej + prof_bd[0] + prof_stell + prof_cdm 

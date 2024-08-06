@@ -129,35 +129,6 @@ class CDMProfile(Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW):
     
     """
 
- #   def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic=True, truncated=True):
-  #      super(CDMProfile, self).__init__(mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, truncated=truncated)
-        #super(ccl.halos.profiles.nfw.HaloProfileNFW, self).__init__(Initialiser)
-        
-  #      self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, truncated=truncated)
-            
-     #   self.cosmo = cosmo
-     #   self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-      #  self.f_c = 1 - self.f_bar_b
-   #     self.Gamma = Gamma
-
-     #   self.update_parameters = Initialiser(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, projected_analytic=projected_analytic, cumul2d_analytic=cumul2d_analytic, truncated=truncated).update_parameters
-
-#    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, fourier_analytic=None, projected_analytic=None, cumul2d_analytic=None, truncated=None):
- #       """Update any of the parameters associated with this profile.
-  #      Any parameter set to ``None`` won't be updated.
-   #     """
-    #    if mass_def is not None:
-     #       self.mass_def = mass_def
-      #  if concentration is not None:
-       #     self.concentration = concentration
-        #if fourier_analytic is not None and fourier_analytic is True:                   
-         #   self._fourier = self._fourier_analytic
-
-#        if cosmo is not None and cosmo != self.cosmo:
- #           self.cosmo = cosmo
-  #          self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
-   #         self.f_c = 1 - self.f_bar_b
-
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         if no_fraction is True:
             f = 1
@@ -202,7 +173,7 @@ class StellarProfile(Initialiser):
                                                           
         return prof
 
-    def _fourier_analytic(self, k, M, scale_a=1):
+    def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
@@ -227,15 +198,18 @@ class EjectedGasProfile(Initialiser):
     Inherits __init__ , update_parameters, _f_stell, & _f_bd from Initialiser. """  
 
             
-    def _real(self, cosmo, r, M, scale_a=1, delta=200, eta_b = 0.5): 
+    def _real(self, cosmo, r, M, scale_a=1, delta=200, eta_b = 0.5, no_fraction=False): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # halo virial radius
         r_e = 0.375*r_vir*np.sqrt(delta)*eta_b                                    # eta_b = a free parameter
 
-        f_bd, f_stell = self._f_bd(M)
-        f_ej = self.f_bar_b - f_stell - f_bd
-        prefix = f_ej * M_use / (scale_a*r_e*np.sqrt(2*np.pi))**3  
+        if no_fraction is True:
+            f = 1
+        else:
+            f_bd, f_stell = self._f_bd(M)
+            f = self.f_bar_b - f_stell - f_bd # f = f_ej
+        prefix = f * M_use / (scale_a*r_e*np.sqrt(2*np.pi))**3  
         x = r_use[None, :] / r_e[:, None]
         prof = prefix[:, None] * np.exp(-(x**2)/2)
 
@@ -246,15 +220,18 @@ class EjectedGasProfile(Initialiser):
                                                           
         return prof
 
-    def _fourier_analytic(self, k, M, scale_a=1, delta=200, eta_b = 0.5):
+    def _fourier_analytic(self, k, M, scale_a=1, delta=200, eta_b = 0.5, no_fraction=False):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # halo virial radius
         r_e = 0.375*r_vir*np.sqrt(delta)*eta_b                                    # eta_b = a free parameter
 
-        f_bd, f_stell = self._f_bd(M)
-        f_ej = self.f_bar_b - f_stell - f_bd
-        prefix = f_ej * M_use / scale_a**3
+        if no_fraction is True:
+            f = 1
+        else:
+            f_bd, f_stell = self._f_bd(M)
+            f = self.f_bar_b - f_stell - f_bd # f = f_ej
+        prefix = f * M_use / scale_a**3
         x = k_use[None, :] * r_e[:, None]
         prof = prefix[:, None] * np.exp(-(x**2)/2)  
 
@@ -304,7 +281,7 @@ class BoundGasProfile(Initialiser):
         func_normQ0 = interpol.interp1d(gamma_list, I0_array) 
         return func_normQ0
         
-    def _real(self, cosmo, r, M, scale_a=1, call_interp=True): 
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, no_fraction=False): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
         
@@ -321,8 +298,12 @@ class BoundGasProfile(Initialiser):
                     self._func_normQ0 = self._norm_interpol1() 
             vB_prefix = 4*np.pi*(r_s**3)*self._func_normQ0(1/(self.Gamma-1))
 
-        f_bd, f_stell = self._f_bd(M)
-        prefix = f_bd * M_use * (1/scale_a**3) * (1/vB_prefix)
+        if no_fraction is True:
+            f = 1
+        else:
+            f_bd, f_stell = self._f_bd(M)
+            f = f_bd # f = f_bd
+        prefix = f * M_use * (1/scale_a**3) * (1/vB_prefix)
 
         x = r_use[None, :] / r_s[:, None]
         prof = prefix[:, None] * self._shape(x, 1/(self.Gamma-1)) 
@@ -349,7 +330,7 @@ class BoundGasProfile(Initialiser):
         func_normQany = interpol.RegularGridInterpolator((gamma_list, np.log(q_array)), I0_array)
         return func_normQany
     
-    def _fourier_analytic(self, k, M, scale_a=1):
+    def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
@@ -369,8 +350,12 @@ class BoundGasProfile(Initialiser):
         gAny = self._func_normQany((1/(self.Gamma-1), np.log(q_use)))
         g_k = gAny/g0 
 
-        f_bd, f_stell = self._f_bd(M)
-        prefix = f_bd * M_use / scale_a**3
+        if no_fraction is True:
+            f = 1
+        else:
+            f_bd, f_stell = self._f_bd(M)
+            f = f_bd # f = f_bd
+        prefix = f * M_use / scale_a**3
         prof = prefix[:, None] * g_k[None,:] 
 
         if np.ndim(k) == 0:
@@ -405,25 +390,28 @@ class BCMProfile(Initialiser):
         self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
         self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, truncated=truncated)
 
-   #     self.cosmo=cosmo
-        # do I need these?
-   #     self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
             self._fourier = self._fourier_analytic
             
         self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
         self._func_normQany = None
-
-        # self.f_bar_b = self.
-        # self.f_c = self.initialiser.f_c
         
-    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None):
+    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, centre_pt=None, no_fraction=False, choose_fracs=[1, 1, 1, 1]):
 
         # the mass fractions are now included in the individual profiles
-        prof_ej = self.ejProfile._real(cosmo, r, M, scale_a) 
-        prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp)
-        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt)
-        prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a) 
+        prof_ej = self.ejProfile._real(cosmo, r, M, scale_a, no_fraction) 
+        prof_bd = self.boundProfile._real(cosmo, r, M, scale_a, call_interp, no_fraction)
+        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, centre_pt, no_fraction)
+        prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
+
+        if no_fraction is True:
+            prof_ej = prof_ej*choose_fracs[0]
+            prof_bd = prof_bd*choose_fracs[1]
+            prof_stell = prof_stell*choose_fracs[2]
+            prof_cdm = prof_cdm*choose_fracs[3]
+        # to introduce ability to choose which profs to sum, & to take care of correct indexing when putting in the chosen fractions, could switch choose_fracs from a list to a dictionary
+        # eg - choose_fracs = {'e': frac_ej, 'bd': frac_bd, 'stell': frac_stell, 'cdm': 'frac_cdm'}
+        # could add another dict in pars, but this 1 gives the list of profs to sum
 
         if np.shape(M) == ():
             prof_array = prof_ej + prof_bd + prof_stell + prof_cdm 
@@ -436,13 +424,19 @@ class BCMProfile(Initialiser):
                 i+=1
         return prof_array
 
-    def _fourier_analytic(self, k, M, scale_a=1, delta=200, eta_b = 0.5):
+    def _fourier_analytic(self, k, M, scale_a=1, delta=200, eta_b = 0.5, no_fraction=False):
         
         # the mass fractions are now included in the individual profiles
-        prof_ej = self.ejProfile._fourier(k, M, scale_a, delta, eta_b)
-        prof_bd = self.boundProfile._fourier(k, M, scale_a)
-        prof_stell = self.stellProfile._fourier(k, M, scale_a)  
-        prof_cdm = self.cdmProfile._fourier(k, M, scale_a) 
+        prof_ej = self.ejProfile._fourier(k, M, scale_a, delta, eta_b, no_fraction)
+        prof_bd = self.boundProfile._fourier(k, M, scale_a, no_fraction)
+        prof_stell = self.stellProfile._fourier(k, M, scale_a, no_fraction)  
+        prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
+
+        if no_fraction is True:
+            prof_ej = prof_ej*choose_fracs[0]
+            prof_bd = prof_bd*choose_fracs[1]
+            prof_stell = prof_stell*choose_fracs[2]
+            prof_cdm = prof_cdm*choose_fracs[3]
 
         if np.shape(M) == ():
             prof_array = prof_ej + prof_bd[0] + prof_stell + prof_cdm 
