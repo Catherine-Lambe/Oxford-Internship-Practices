@@ -8,7 +8,7 @@ import scipy.integrate as integrate
 import scipy.interpolate as interpol
 from pyccl._core import UnlockInstance
 
-class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
+class BCM_Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
     """ Contains the __init__ , update_parameters, _f_stell & _f_bd methods to be inherited.
     """
     
@@ -17,7 +17,7 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
                  beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, 
                  projected_analytic=False, cumul2d_analytic=False, truncated=True):
         
-        super(Initialiser, self).__init__(mass_def=mass_def, concentration=concentration)
+        super(BCM_Initialiser, self).__init__(mass_def=mass_def, concentration=concentration)
 
         self.fourier_analytic = fourier_analytic
         if fourier_analytic is True:
@@ -131,7 +131,7 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
             self._func_normQany = self._norm_interpol2()
             
 
-class CDMProfile(Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW): 
+class CDMProfile(BCM_Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW): 
     """Density profile for the cold dark matter (cdm), using the Navarro-Frenk-White, multiplied by the cdm's mass fraction (unless no_fraction is set to True in the real & analytical Fourier methods below).
     
     """
@@ -152,7 +152,7 @@ class CDMProfile(Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW):
         prof = f * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
         return prof
 
-class StellarProfile(Initialiser): 
+class StellarProfile(BCM_Initialiser): 
     """Creating a class for the stellar density profile
     where: 
     .. math::
@@ -206,7 +206,7 @@ class StellarProfile(Initialiser):
 
         return prof
 
-class EjectedGasProfile(Initialiser): 
+class EjectedGasProfile(BCM_Initialiser): 
     """Creating a class for the ejected gas density profile
     where: 
     
@@ -257,7 +257,7 @@ class EjectedGasProfile(Initialiser):
 
         return prof
 
-class BoundGasProfile(Initialiser): 
+class BoundGasProfile(BCM_Initialiser): 
     """Creating a class for the bound gas density profile where: 
     
     .. math::
@@ -387,7 +387,7 @@ class BoundGasProfile(Initialiser):
 
         return prof
 
-class BCMProfile(Initialiser): 
+class BCMProfile(BCM_Initialiser): 
     """Combined profile for the stellar & ejected & bound gas & cdm components (ie- The BCM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the cold dark matter (cdm) component.
 
     Inherits update_parameters , _f_stell & _f_bd from Initialiser.
@@ -402,8 +402,6 @@ class BCMProfile(Initialiser):
 #    For the bound gas: $f_b(M)\ = \frac{\bar{f}_b - f_*(M)}{1 + (M_c/M)^{\beta}} $,      
 #    with default parameter of: $M_c \simeq 10^{13.5 - 14} M_{\odot}$ & $\beta \sim 0.6$. 
 #    For the ejected gas: $f_e(M)\ = \bar{f}_b\ - f_b(M)\ - f_*(M)\ $.
-
-
 
     def __init__(self, cosmo, mass_def, concentration, Gamma, fourier_analytic = True, delta=200, eta_b = 0.5, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c = 10**(13.5), M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, truncated=True):
         
