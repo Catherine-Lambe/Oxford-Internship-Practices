@@ -8,7 +8,7 @@ import scipy.integrate as integrate
 import scipy.interpolate as interpol
 from pyccl._core import UnlockInstance
 
-class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
+class BCM_Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
     """ Contains the __init__ , update_parameters, _f_stell & _f_bd methods to be inherited.
     """
     
