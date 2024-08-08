@@ -163,8 +163,11 @@ class StellarProfile(Initialiser):
         \\tilde{g}_*(k)\ = 1.
 
     Inherits __init__ , update_parameters, & _f_stell methods from Initialiser parent class.
+
+    To do later: Change real profile of stellar from delta function to (...)
     """ 
-            
+
+    # To do later: Change real profile of stellar from delta function to (...)
     def _real(self, cosmo, r, M, scale_a=1, centre_pt=None, no_fraction=False): 
         # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
         r_use = np.atleast_1d(r) 
