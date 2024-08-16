@@ -18,30 +18,33 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
     ## m_0g = 5E12/cosmo['h']
 
     # with these as default parameters, code won't run (as in, be imported), as cosmo is not defined
+    # make note of. For moment: have 'prefixes' as defaults, then factor in the corresponding cosmo['h'] in init afterwards
 
     def __init__(self, cosmo, mass_def, 
-                alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s=5E12/cosmo['h'], sigma_s=1.2, rho_avg_star=7E8*cosmo['h']**2, limInt_mStell=(1E10, 1E15), 
-                fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g = 5E12/cosmo['h'], sigma_g = 1.2, truncate_param=1):
+                alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), 
+                 m_0s=None, rho_avg_star=None, m_0g=None,
+                fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
         super(Initialiser_SAM, self).__init__(mass_def=mass_def)
         self.cosmo = cosmo
         
         self.alpha = alpha
         self.r_t = r_t
         self.xDelta_stel = xDelta_stel
-        self.m_0s = m_0s = 5E12/cosmo['h']
         self.sigma_s = sigma_s
-        self.rho_avg_star = rho_avg_star
         self.limInt_mStell = limInt_mStell
         
         self.fourier_numerical = fourier_numerical
         if fourier_numerical is True:
             self._fourier = self._fourier_numerical
 
+        self.m_0s = m_0s_prefix/cosmo['h'] # come back to
+        self.rho_avg_star = rho_avg_star_prefix**cosmo['h']**2 # come back to
+
         self.beta=beta
         self.r_c = r_c
         self.xDelta_gas = xDelta_gas
         self.truncate_param = truncate_param # if truncate=True in real, truncate at r > (r_vir * truncate_param)
-        self.m_0g = m_0g
+        self.m_0g = m_0g_prefix/cosmo['h']  # come back to
         self.sigma_g = sigma_g
 
         self.limInt = limInt
