@@ -100,13 +100,9 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         return f_array
 
         ### UPDATE_PARAMETERS
-    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, alpha=None, 
+    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, , sigma_s=None, limInt_mStell=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, 
                           
-                          r_t=None, xDelta_stel=None, m_0s_prefix=None, sigma_s=None, rho_avg_star_prefix=None, limInt_mStell=None, m_0s=None, rho_avg_star=None, m_0g=None, truncated=None, fourier_analytic=None, fourier_numerical=None, 
-                          beta=None, r_c=None, xDelta_gas=None, limInt=None, nk=None, krange=None, m_0g_prefix=None, sigma_g=None, truncate_param=None
-                          
-                          
-                        delta=None, eta_b = None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
+                          m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g=None, fourier_numerical=None limInt=None, nk=None, krange=None, m_0g_prefix=None, truncate_param=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
@@ -125,25 +121,41 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         if truncated is not None and truncated is True:
             self.truncated = truncated
             re_nfw = True
-        if alpha is not None and alpha != self.alpha:
-            self.alpha = Gamma
-        if delta is not None and delta != self.delta:
-            self.delta = delta
-        if eta_b is not None and eta_b != self.eta_b:
-            self.eta_b = eta_b
         if re_nfw is True:
             self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, truncated=truncated) 
+
+        if alpha is not None and alpha != self.alpha:
+            self.alpha = alpha
+        if r_t is not None and r_t != self.r_t:
+            self.r_t = r_t
+        if xDelta_stel is not None and xDelta_stel != self.xDelta_stel:
+            self.xDelta_stel = xDelta_stel
+        if sigma_s is not None and sigma_s != self.sigma_s:
+            self.sigma_s = sigma_s
+        if limInt_mStell is not None and limInt_mStell != self.limInt_mStell:
+            self.limInt_mStell = limInt_mStell
+
+        if m_0s is not None and m_0s != self.m_0s:
+            self.m_0s = m_0s
+        if m_0s_prefix is not None and m_0s is None and m_0s != self.m_0s:
+            self.m_0s = m_0s_prefix/self.cosmo['h'] 
+        if rho_avg_star is not None and rho_avg_star != self.rho_avg_star:
+            self.rho_avg_star = rho_avg_star
+        if rho_avg_star is not None and rho_avg_star is None and rho_avg_star != self.rho_avg_star:
+            self.rho_avg_star = rho_avg_star_prefix**self.cosmo['h']**2 
+        if m_0g is not None and m_0g != self.m_0g:
+            self.m_0g = m_0g
+        if m_0g_prefix is not None and m_0g is None and m_0g != self.m_0g:
+            self.m_0g = m_0g_prefix/self.cosmo['h']
         
         if beta is not None and beta != self.beta:
             self.beta = beta
-        if M_c is not None and M_c != self.M_c:
-            self.M_c = M_c
-        if M_star is not None and M_star != self.M_star:
-            self.M_star = M_star
-        if A_star is not None and A_star != self.A_star:
-            self.A_star = A_star
-        if sigma_star is not None and sigma_star != self.sigma_star:
-            self.sigma_star = sigma_star
+        if r_c is not None and r_c != self.r_c:
+            self.r_c = M_c
+        if xDelta_gas is not None and xDelta_gas != self.xDelta_gas:
+            self.xDelta_gas = xDelta_gas
+        if sigma_g is not None and sigma_g != self.sigma_g:
+            self.sigma_g = sigma_g
 
         if cosmo is not None and cosmo != self.cosmo:
             self.cosmo = cosmo
