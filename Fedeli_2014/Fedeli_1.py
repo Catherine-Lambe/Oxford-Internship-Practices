@@ -19,10 +19,12 @@ class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
 class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
     """
-    def __init__(self, cosmo, mass_def, alpha=1, m_0s=5E12/cosmo['h'], sigma_s=1.2, rho_avg_star=7E8*cosmo['h']**2, limInt_mStell=(1E10 , 1E15)):
+    def __init__(self, cosmo, mass_def, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s=5E12/cosmo['h'], sigma_s=1.2, rho_avg_star=7E8*cosmo['h']**2, limInt_mStell=(1E10, 1E15)):
         super(StellarProfile, self).__init__(mass_def=mass_def)
         self.cosmo = cosmo
         self.alpha = alpha
+        self.r_t = r_t
+        self.xDelta_stel = xDelta_stel
         self.m_0s = m_0s = 5E12/cosmo['h']
         self.sigma_s = sigma_s
         self.rho_avg_star = rho_avg_star
@@ -44,21 +46,21 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
         A = self.rho_avg_star / integrad[0] 
         return A * self._f_stell_noA(m)
     
-    def _real(self, cosmo, r, M, scale_a=1, r_t = 1, xDel_ratio = 1/0.03):
+    def _real(self, cosmo, r, M, scale_a=1, xDel_ratio = 1/0.03):
         """ X
         """
         r_use = np.atleast_1d(r)
         M_use = np.atleast_1d(M)
 
-        # r_t = 
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
         f_stell = self._f_stell(M_use)
         
-        if xDel_ratio is None:
-            x_delta = r_vir / r_t # use the inputted value of r_t
+        if self.xDelta_stel is None:
+            r_t = self.r_t
+            x_delta = r_vir / self.r_t # use the inputted value of r_t
         else:
             # default: x_delta = 1/0.03, as in Fedeli 2014 paper 
-            x_delta = xDel_ratio  # reassign r_c in order to give the specific r_c/r_Del ratio desired 
+            x_delta = self.xDelta_stel  # reassign r_c in order to give the specific r_c/r_Del ratio desired 
             r_t = r_vir / x_delta
             
         nu_alpha = 1 - (2 / self.alpha)
@@ -79,9 +81,7 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
 class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Gas halo density profile. Fedeli (2014) arXiv:1401.2997
     """
-    def __init__(self, cosmo, mass_def, fourier_numerical=True, beta=2/3, limInt=(0,1), nk=64, krange=(5E-3, 5E2), # (1E-2,9E1)
-                 m_0g = 5E12/cosmo['h'], sigma_g = 1.2,
-                 truncate_param=1):
+    def __init__(self, cosmo, mass_def, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g = 5E12/cosmo['h'], sigma_g = 1.2, truncate_param=1):
         super(GasProfile, self).__init__(mass_def=mass_def)
         self.fourier_numerical = fourier_numerical
         if fourier_numerical is True:
@@ -89,6 +89,8 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
         self.cosmo = cosmo
         self.beta=beta
+        self.r_c = r_c
+        self.xDelta_gas = xDelta_gas
         self.truncate_param = truncate_param # if truncate=True in real, truncate at r > (r_vir * truncate_param)
         self.m_0g = m_0g
         self.sigma_g = sigma_g
@@ -108,7 +110,7 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
                 f_array[i] = (self.cosmo['Omega_b']/self.cosmo['Omega_m']) * erf(np.log10(mass/self.m_0g) / self.sigma_g)
         return f_array
     
-    def _real(self, cosmo, r, M, scale_a=1, r_c = 1, xDel_ratio=1/0.05, truncate=True, # for inbuilt FFT, need truncation to be default
+    def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
               no_prefix=False): 
         """ X
         """
@@ -116,15 +118,15 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         r_use = np.atleast_1d(r)
         M_use = np.atleast_1d(M)
 
-        # r_c = 
         r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
         f_gas = self._f_gas(M_use)
 
-        if xDel_ratio is None:
-            x_delta = r_vir / r_c # use the inputted value of r_c
+        if self.xDelta_gas is None:
+            x_delta = r_vir / self.r_c # use the inputted value of r_c
+            r_c = self.r_c
         else:
             # default: x_delta = 1/0.05, as in Fedeli 2014 paper 
-            x_delta = xDel_ratio  # reassign r_c in order to give the specific r_c/r_Del ratio desired 
+            x_delta = self.xDelta_ratio  # reassign r_c in order to give the specific r_c/r_Del ratio desired 
             r_c = r_vir / x_delta
 
         rho_bracket = (x_delta**3) * hyp2f1(3/2, 3*self.beta/2, 5/2, -(x_delta**2))
@@ -148,15 +150,15 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
             prof = np.squeeze(prof, axis=0)
         return prof
 
-    def _fourier_integral(self, x, M, r_vir, cosmo=cosmo, scale_a=1, xDel_ratio=1/0.05, no_prefix=False):
+    def _fourier_integral(self, x, M, r_vir, cosmo=cosmo, scale_a=1, no_prefix=False):
         """ Function to integrate for the Fedeli Fourier transform: 
         prof_fourier(k) = prof_real * x, integrated over x from 0 to 1, weighted by sin(k * R_delta * x) 
         & multiplied by prefix of 4*pi*R_delta^2 / k"""
-        prof_real = self._real(cosmo=cosmo, r=x*r_vir, M=M, scale_a=scale_a, xDel_ratio=xDel_ratio, no_prefix=no_prefix)
+        prof_real = self._real(cosmo=cosmo, r=x*r_vir, M=M, scale_a=scale_a, no_prefix=no_prefix)
         integral = prof_real * x
         return integral
 
-    def _interpol_fourier(self, M_array, cosmo=cosmo, scale_a=1, xDel_ratio=1/0.05, no_prefix=False):  
+    def _interpol_fourier(self, M_array, cosmo=cosmo, scale_a=1, no_prefix=False):  
         # interpolator for Fedeli's Fourier interpolator, over k
         k_list = np.geomspace(self.krange[0], self.krange[1], self.nk) 
         I0_array = np.zeros((len(M_array), self.nk))
@@ -165,27 +167,25 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         for i, mass in enumerate(M_array):
             r_vir = self.mass_def.get_radius(cosmo, mass, scale_a) / scale_a  
             for j, k_value in enumerate(k_list):
-                int_bob = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], # 0, 1, 
-                                         args=(mass, r_vir, cosmo, scale_a, xDel_ratio, no_prefix), weight="sin", wvar=r_vir*k_value)[0] 
+                int_bob = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], 
+                                         args=(mass, r_vir, cosmo, scale_a, no_prefix), weight="sin", wvar=r_vir*k_value)[0] 
                 I0_array[i, j] = int_bob * 4 * np.pi * (r_vir **2) / k_value
             func_fourier = interpol.interp1d(k_list, I0_array) 
         return func_fourier
     
-    def _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100),
-                           r_c = 1, xDel_ratio=1/0.05, no_prefix=False): 
+    def _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False): 
         """ X
         """
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
-        # r_c = 
         r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
         f_gas = self._f_gas(M_use)
 
         if interpol_true is True:
             if self._func_fourier is None:
                 with UnlockInstance(self):
-                    self._func_fourier = self._interpol_fourier(M_use, cosmo, scale_a, xDel_ratio, no_prefix) 
+                    self._func_fourier = self._interpol_fourier(M_use, cosmo, scale_a, no_prefix) 
         # giving it the Masses above when setting up the profile
             prof = self._func_fourier(k_use)
             
@@ -194,7 +194,7 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
             prof_array = np.zeros((len(M_use), len(k2_use))) 
             for i, mass in enumerate(M_use):
                 for j, k_value in enumerate(k_use):
-                    integrated = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], # 0, 1, 
+                    integrated = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], 
                                                 args=(mass, r_vir[i]), weight="sin", wvar=r_vir[i]*k_value)[0]
                     prof_array[i,j] = integrated * 4 * np.pi * (r_vir[i] **2) / k_value
             prof = prof_array
