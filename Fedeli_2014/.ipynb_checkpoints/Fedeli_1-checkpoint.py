@@ -100,7 +100,13 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         return f_array
 
         ### UPDATE_PARAMETERS
-    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, delta=None, eta_b = None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None, truncated=None):
+    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, alpha=None, 
+                          
+                          r_t=None, xDelta_stel=None, m_0s_prefix=None, sigma_s=None, rho_avg_star_prefix=None, limInt_mStell=None, m_0s=None, rho_avg_star=None, m_0g=None, truncated=None, fourier_analytic=None, fourier_numerical=None, 
+                          beta=None, r_c=None, xDelta_gas=None, limInt=None, nk=None, krange=None, m_0g_prefix=None, sigma_g=None, truncate_param=None
+                          
+                          
+                        delta=None, eta_b = None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
@@ -108,17 +114,19 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         if mass_def is not None and mass_def != self.mass_def:
             self.mass_def = mass_def
             re_nfw = True
+        if mass_func is not None and mass_func != self.mass_func:
+            self.mass_func = mass_func
         if concentration is not None and concentration != self.concentration:
             self.concentration = concentration
             re_nfw = True
-        if fourier_analytic is not None and fourier_analytic is True: 
+        if fourier_analytic is not None and fourier_analytic is True and self.__class__.__name__ == 'CDMProfile': 
             self._fourier = self._fourier_analytic    
             re_nfw = True
         if truncated is not None and truncated is True:
             self.truncated = truncated
             re_nfw = True
-        if Gamma is not None and Gamma != self.Gamma:
-            self.Gamma = Gamma
+        if alpha is not None and alpha != self.alpha:
+            self.alpha = Gamma
         if delta is not None and delta != self.delta:
             self.delta = delta
         if eta_b is not None and eta_b != self.eta_b:
