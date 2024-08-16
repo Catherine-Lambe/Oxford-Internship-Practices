@@ -65,10 +65,10 @@ class BCM_Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
         Any parameter set to ``None`` won't be updated.
         """
         re_nfw = False # Check if we need to re-compute the [truncated] nfw profile for the cdm
-        if mass_def is not None:
+        if mass_def is not None and mass_def != self.mass_def:
             self.mass_def = mass_def
             re_nfw = True
-        if concentration is not None:
+        if concentration is not None and concentration != self.concentration:
             self.concentration = concentration
             re_nfw = True
         if fourier_analytic is not None and fourier_analytic is True: 
@@ -77,25 +77,25 @@ class BCM_Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
         if truncated is not None and truncated is True:
             self.truncated = truncated
             re_nfw = True
-        if Gamma is not None:
+        if Gamma is not None and Gamma != self.Gamma:
             self.Gamma = Gamma
-        if delta is not None:
+        if delta is not None and delta != self.delta:
             self.delta = delta
-        if eta_b is not None:
+        if eta_b is not None and eta_b != self.eta_b:
             self.eta_b = eta_b
 
         if re_nfw is True:
             self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, truncated=truncated) 
         
-        if beta is not None:
+        if beta is not None and beta != self.beta:
             self.beta = beta
-        if M_c is not None:
+        if M_c is not None and M_c != self.M_c:
             self.M_c = M_c
-        if M_star is not None:
+        if M_star is not None and M_star != self.M_star:
             self.M_star = M_star
-        if A_star is not None:
+        if A_star is not None and A_star != self.A_star:
             self.A_star = A_star
-        if sigma_star is not None:
+        if sigma_star is not None and sigma_star != self.sigma_star:
             self.sigma_star = sigma_star
 
         if cosmo is not None and cosmo != self.cosmo:

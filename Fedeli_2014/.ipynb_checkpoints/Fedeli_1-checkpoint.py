@@ -37,14 +37,23 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         if fourier_numerical is True:
             self._fourier = self._fourier_numerical
 
-        self.m_0s = m_0s_prefix/cosmo['h'] # come back to
-        self.rho_avg_star = rho_avg_star_prefix**cosmo['h']**2 # come back to
+        if m_0s is not None:
+            self.m_0s = m_0s
+        else:
+            self.m_0s = m_0s_prefix/self.cosmo['h'] # come back to
+        if rho_avg_star is not None:
+            self.rho_avg_star = rho_avg_star
+        else:
+            self.rho_avg_star = rho_avg_star_prefix**self.cosmo['h']**2 # come back to
+        if m_0g is not None:
+            self.m_0g = m_0g
+        else:
+            self.m_0g = m_0g_prefix/self.cosmo['h']  # come back to
 
         self.beta=beta
         self.r_c = r_c
         self.xDelta_gas = xDelta_gas
         self.truncate_param = truncate_param # if truncate=True in real, truncate at r > (r_vir * truncate_param)
-        self.m_0g = m_0g_prefix/cosmo['h']  # come back to
         self.sigma_g = sigma_g
 
         self.limInt = limInt
@@ -84,16 +93,6 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
 class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
     """
-    def __init__(self, cosmo, mass_def, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s=5E12/cosmo['h'], sigma_s=1.2, rho_avg_star=7E8*cosmo['h']**2, limInt_mStell=(1E10, 1E15)):
-        super(StellarProfile, self).__init__(mass_def=mass_def)
-        self.cosmo = cosmo
-        self.alpha = alpha
-        self.r_t = r_t
-        self.xDelta_stel = xDelta_stel
-        self.m_0s = m_0s = 5E12/cosmo['h']
-        self.sigma_s = sigma_s
-        self.rho_avg_star = rho_avg_star
-        self.limInt_mStell = limInt_mStell
 
     
     def _real(self, cosmo, r, M, scale_a=1, xDel_ratio = 1/0.03):
@@ -131,25 +130,7 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
 class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Gas halo density profile. Fedeli (2014) arXiv:1401.2997
     """
-    def __init__(self, cosmo, mass_def, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g = 5E12/cosmo['h'], sigma_g = 1.2, truncate_param=1):
-        super(GasProfile, self).__init__(mass_def=mass_def)
-        self.fourier_numerical = fourier_numerical
-        if fourier_numerical is True:
-            self._fourier = self._fourier_numerical
-
-        self.cosmo = cosmo
-        self.beta=beta
-        self.r_c = r_c
-        self.xDelta_gas = xDelta_gas
-        self.truncate_param = truncate_param # if truncate=True in real, truncate at r > (r_vir * truncate_param)
-        self.m_0g = m_0g
-        self.sigma_g = sigma_g
-
-        self.limInt = limInt
-        self.krange = krange
-        self.nk = nk
-        self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
-    
+   
     def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
               no_prefix=False): 
         """ X
