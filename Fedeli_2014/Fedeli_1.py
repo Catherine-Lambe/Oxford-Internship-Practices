@@ -1,4 +1,4 @@
-__all__ = ("Initialiser", "StellarProfile", "GasProfile", "CDMProfile" , "SAMProfile")
+__all__ = ("Initialiser_SAM", "StellarProfile", "GasProfile", "CDMProfile" , "SAMProfile")
 
 import numpy as np
 import pyccl as ccl
@@ -8,13 +8,70 @@ import scipy.interpolate as interpol
 from scipy.special import erf, gamma, expn, hyp2f1, exp1
 from pyccl._core import UnlockInstance
 
-class Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
+class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Contains the __init__ , update_parameters, 
 ## _f_stell & _f_bd 
     methods to be inherited.
     """
 
-    XXX
+    def __init__(self, cosmo, mass_def, 
+                alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s=5E12/cosmo['h'], sigma_s=1.2, rho_avg_star=7E8*cosmo['h']**2, limInt_mStell=(1E10, 1E15), 
+                fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g = 5E12/cosmo['h'], sigma_g = 1.2, truncate_param=1):
+        super(Initialiser_SAM, self).__init__(mass_def=mass_def)
+        self.cosmo = cosmo
+        
+        self.alpha = alpha
+        self.r_t = r_t
+        self.xDelta_stel = xDelta_stel
+        self.m_0s = m_0s = 5E12/cosmo['h']
+        self.sigma_s = sigma_s
+        self.rho_avg_star = rho_avg_star
+        self.limInt_mStell = limInt_mStell
+        
+        self.fourier_numerical = fourier_numerical
+        if fourier_numerical is True:
+            self._fourier = self._fourier_numerical
+
+        self.beta=beta
+        self.r_c = r_c
+        self.xDelta_gas = xDelta_gas
+        self.truncate_param = truncate_param # if truncate=True in real, truncate at r > (r_vir * truncate_param)
+        self.m_0g = m_0g
+        self.sigma_g = sigma_g
+
+        self.limInt = limInt
+        self.krange = krange
+        self.nk = nk
+        self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
+
+        #### MASS FRACTIONS
+        
+    def _f_stell_noA(self, M):
+        return np.exp( (-1/2) * ( np.log10(M/self.m_0s) /self.sigma_s )**2 )
+    
+    def _f_stell_integrand(self, M):
+        # integrand = m * f_star(m) * n(m), where n(m,z) is the standard DM-only halo mass function
+      #  DM_mass_func = hmf_200m(cosmo,m,a_sf)/(m*np.log(10)) # ? have as a self. ? (can't with scale_a, but-)
+        DM_mass_func = hmf_200m(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
+        return m* self._f_stell_noA(M) * DM_mass_func 
+     
+    def _f_stell(self, M):
+        # f_star(m) = A*np.exp( (-1/2) * ( np.log10(m/m_0s) /omega_s )**2 )
+        integrad = integrate.quad(self._f_stell_integrand, self.limInt_mStell[0], self.limInt_mStell[1])  # integrating over m (dm)
+        A = self.rho_avg_star / integrad[0] 
+        return A * self._f_stell_noA(M)
+
+    def _f_gas(self, M):
+        m_use = np.atleast_1d(M)
+        f_array = np.zeros(np.shape(M_use))
+        for i, mass in enumerate(M_use):
+            if (mass < self.m_0g):
+                f_array[i] = 0
+            else:
+                f_array[i] = (self.cosmo['Omega_b']/self.cosmo['Omega_m']) * erf(np.log10(mass/self.m_0g) / self.sigma_g)
+        return f_array
+
+        ### UPDATE_PARAMETERS
 
 class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
@@ -30,21 +87,6 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.rho_avg_star = rho_avg_star
         self.limInt_mStell = limInt_mStell
 
-    def _f_stell_noA(self, m):
-        return np.exp( (-1/2) * ( np.log10(m/self.m_0s) /self.sigma_s )**2 )
-    
-    def _f_stell_integrand(self, m):
-        # integrand = m * f_star(m) * n(m), where n(m,z) is the standard DM-only halo mass function
-      #  DM_mass_func = hmf_200m(cosmo,m,a_sf)/(m*np.log(10)) # ? have as a self. ? (can't with scale_a, but-)
-        DM_mass_func = hmf_200m(self.cosmo, np.atleast_1d(m), 1) / (np.atleast_1d(m)*np.log(10))
-        return m* self._f_stell_noA(m) * DM_mass_func 
-    
-    # once we have A:   # f_star(m) = A*np.exp( (-1/2) * ( np.log10(m/m_0s) /omega_s )**2 )
-    def _f_stell(self, m):
-        # integrating over m (dm)
-        integrad = integrate.quad(self._f_stell_integrand, self.limInt_mStell[0], self.limInt_mStell[1])
-        A = self.rho_avg_star / integrad[0] 
-        return A * self._f_stell_noA(m)
     
     def _real(self, cosmo, r, M, scale_a=1, xDel_ratio = 1/0.03):
         """ X
@@ -99,16 +141,6 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.krange = krange
         self.nk = nk
         self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
-
-    def _f_gas(self, m):
-        m_use = np.atleast_1d(m)
-        f_array = np.zeros(np.shape(m_use))
-        for i, mass in enumerate(m_use):
-            if (mass < self.m_0g):
-                f_array[i] = 0
-            else:
-                f_array[i] = (self.cosmo['Omega_b']/self.cosmo['Omega_m']) * erf(np.log10(mass/self.m_0g) / self.sigma_g)
-        return f_array
     
     def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
               no_prefix=False): 
