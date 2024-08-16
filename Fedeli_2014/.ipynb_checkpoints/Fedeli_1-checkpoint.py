@@ -9,9 +9,8 @@ from scipy.special import erf, gamma, expn, hyp2f1, exp1
 from pyccl._core import UnlockInstance
 
 class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
-    """ Contains the __init__ , update_parameters, 
-## mass fraction (_f_ , _f_ )
-    methods to be inherited.
+    """ Contains the __init__ , update_parameters, mass fraction (_f_stell , _f_gas ) methods to be inherited.
+    Note: only CDM is set up with the no_frac option currently (need to add to stellar & gas).
     """
     ## m_0s=5E12/cosmo['h'] 
     ## rho_avg_star=7E8*.cosmo['h']**2 
@@ -101,6 +100,74 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         return f_array
 
         ### UPDATE_PARAMETERS
+    def update_parameters(self, cosmo=None, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, delta=None, eta_b = None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None, truncated=None):
+        """Update any of the parameters associated with this profile.
+        Any parameter set to ``None`` won't be updated.
+        """
+        re_nfw = False # Check if we need to re-compute the [truncated] nfw profile for the cdm
+        if mass_def is not None and mass_def != self.mass_def:
+            self.mass_def = mass_def
+            re_nfw = True
+        if concentration is not None and concentration != self.concentration:
+            self.concentration = concentration
+            re_nfw = True
+        if fourier_analytic is not None and fourier_analytic is True: 
+            self._fourier = self._fourier_analytic    
+            re_nfw = True
+        if truncated is not None and truncated is True:
+            self.truncated = truncated
+            re_nfw = True
+        if Gamma is not None and Gamma != self.Gamma:
+            self.Gamma = Gamma
+        if delta is not None and delta != self.delta:
+            self.delta = delta
+        if eta_b is not None and eta_b != self.eta_b:
+            self.eta_b = eta_b
+        if re_nfw is True:
+            self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic, truncated=truncated) 
+        
+        if beta is not None and beta != self.beta:
+            self.beta = beta
+        if M_c is not None and M_c != self.M_c:
+            self.M_c = M_c
+        if M_star is not None and M_star != self.M_star:
+            self.M_star = M_star
+        if A_star is not None and A_star != self.A_star:
+            self.A_star = A_star
+        if sigma_star is not None and sigma_star != self.sigma_star:
+            self.sigma_star = sigma_star
+
+        if cosmo is not None and cosmo != self.cosmo:
+            self.cosmo = cosmo
+            self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
+            self.f_c = 1 - self.f_bar_b
+
+        # Check if we need to recompute the interpolators
+        re_normQ0 = False   
+        re_normQany = False
+        if limInt is not None and limInt != self.limInt:
+            re_normQ0 = True
+            re_normQany = True
+            self.limInt = nq
+        if gammaRange is not None and gammaRange != self.gammaRange:
+            re_normQ0 = True  
+            re_normQany = True
+            self.gammaRange = gammaRange
+        if ngamma is not None and gamma != self.ngamma:
+            re_normQ0 = True   
+            re_normQany = True
+            self.ngamma = ngamma
+        if qrange is not None and qrange != self.qrange:
+            re_normQany = True
+            self.qrange = qrange
+        if nq is not None and nq != self.nq:
+            re_normQany = True
+            self.nq = nq
+
+        if re_normQ0 is True and (self._func_normQ0 is not None):
+            self._func_normQ0 = self._norm_interpol1() 
+        if re_normQany is True and (self._func_normQany is not None):
+            self._func_normQany = self._norm_interpol2()
             
 
 class CDMProfile(Initialiser_SAM): #ccl.halos.profiles.nfw.HaloProfileNFW): 
