@@ -10,9 +10,14 @@ from pyccl._core import UnlockInstance
 
 class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Contains the __init__ , update_parameters, 
-## _f_stell & _f_bd 
+## mass fraction (_f_ , _f_ )
     methods to be inherited.
     """
+    ## m_0s=5E12/cosmo['h'] 
+    ## rho_avg_star=7E8*.cosmo['h']**2 
+    ## m_0g = 5E12/cosmo['h']
+
+    # with these as default parameters, code won't run (as in, be imported), as cosmo is not defined
 
     def __init__(self, cosmo, mass_def, 
                 alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s=5E12/cosmo['h'], sigma_s=1.2, rho_avg_star=7E8*cosmo['h']**2, limInt_mStell=(1E10, 1E15), 
