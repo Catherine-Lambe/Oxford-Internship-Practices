@@ -100,9 +100,9 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         return f_array
 
         ### UPDATE_PARAMETERS
-    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, , sigma_s=None, limInt_mStell=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, 
+    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, , sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None,
                           
-                          m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g=None, fourier_numerical=None limInt=None, nk=None, krange=None, m_0g_prefix=None, truncate_param=None):
+                          limInt=None, nk=None, krange=None, truncate_param=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
@@ -141,7 +141,7 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
             self.m_0s = m_0s_prefix/self.cosmo['h'] 
         if rho_avg_star is not None and rho_avg_star != self.rho_avg_star:
             self.rho_avg_star = rho_avg_star
-        if rho_avg_star is not None and rho_avg_star is None and rho_avg_star != self.rho_avg_star:
+        if rho_avg_star_prefix is not None and rho_avg_star is None and rho_avg_star != self.rho_avg_star:
             self.rho_avg_star = rho_avg_star_prefix**self.cosmo['h']**2 
         if m_0g is not None and m_0g != self.m_0g:
             self.m_0g = m_0g
@@ -162,7 +162,17 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
             self.f_bar_b = self.cosmo['Omega_b']/self.cosmo['Omega_m']
             self.f_c = 1 - self.f_bar_b
 
-        # Check if we need to recompute the interpolators
+        if fourier_numerical is not None and fourier_numerical is True and self.__class__.__name__ == 'GasProfile': 
+            self._fourier = self._fourier_numerical    
+#####
+self.limInt = limInt
+self.krange = krange
+self.nk = nk
+self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
+
+limInt=None, nk=None, krange=None, truncate_param=None
+
+        # Check if we need to recompute the (optional) interpolator for the bound gas
         re_normQ0 = False   
         re_normQany = False
         if limInt is not None and limInt != self.limInt:
