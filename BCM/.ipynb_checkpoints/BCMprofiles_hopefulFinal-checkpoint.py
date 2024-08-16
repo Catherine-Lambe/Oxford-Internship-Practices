@@ -109,7 +109,7 @@ class BCM_Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
         if limInt is not None and limInt != self.limInt:
             re_normQ0 = True
             re_normQany = True
-            self.limInt = nq
+            self.limInt = limInt
         if gammaRange is not None and gammaRange != self.gammaRange:
             re_normQ0 = True  
             re_normQany = True

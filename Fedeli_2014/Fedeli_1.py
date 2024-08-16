@@ -100,9 +100,7 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         return f_array
 
         ### UPDATE_PARAMETERS
-    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, , sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None,
-                          
-                          limInt=None, nk=None, krange=None, truncate_param=None):
+    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, , sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None, limInt=None, nk=None, krange=None, truncate_param=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
@@ -163,41 +161,25 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
             self.f_c = 1 - self.f_bar_b
 
         if fourier_numerical is not None and fourier_numerical is True and self.__class__.__name__ == 'GasProfile': 
-            self._fourier = self._fourier_numerical    
-#####
-self.limInt = limInt
-self.krange = krange
-self.nk = nk
-self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
+            self._fourier = self._fourier_numerical   
 
-limInt=None, nk=None, krange=None, truncate_param=None
-
-        # Check if we need to recompute the (optional) interpolator for the bound gas
-        re_normQ0 = False   
-        re_normQany = False
+        # Check if we need to recompute the (optional) interpolator for the gas
+        re_func_fourier = False   
         if limInt is not None and limInt != self.limInt:
             re_normQ0 = True
-            re_normQany = True
-            self.limInt = nq
-        if gammaRange is not None and gammaRange != self.gammaRange:
-            re_normQ0 = True  
-            re_normQany = True
-            self.gammaRange = gammaRange
-        if ngamma is not None and gamma != self.ngamma:
-            re_normQ0 = True   
-            re_normQany = True
-            self.ngamma = ngamma
-        if qrange is not None and qrange != self.qrange:
-            re_normQany = True
-            self.qrange = qrange
-        if nq is not None and nq != self.nq:
-            re_normQany = True
-            self.nq = nq
-
-        if re_normQ0 is True and (self._func_normQ0 is not None):
-            self._func_normQ0 = self._norm_interpol1() 
-        if re_normQany is True and (self._func_normQany is not None):
-            self._func_normQany = self._norm_interpol2()
+            self.limInt = limInt #nq
+        if kRange is not None and kRange != self.kRange:
+            re_func_fourier = True  
+            self.kRange = kRange
+        if nk is not None and nk != self.nk:  
+            re_func_fourier = True
+            self.nk = nk
+            
+# need to recall the interpolator function for the gas Fourier profile 
+## BUT this relies on calling the real profile (with the given masses, & so on)
+## so instead of recalling the interpolator here: set it to None, so it will be recalculated when the Fourier method is next called
+        if re_func_fourier is True and (self._func_fourier is not None):  
+            self._func_fourier = None
             
 
 class CDMProfile(Initialiser_SAM): #ccl.halos.profiles.nfw.HaloProfileNFW): 
@@ -357,3 +339,14 @@ class GasProfile(Initialiser_SAM):
         if np.ndim(M) == 0:
             prof = np.squeeze(prof, axis=0)
         return prof
+
+    class SAMProfile(Initialiser_SAM):
+        """Combined profile for the stellar & gas & cdm components (ie- Fedeli 2014's SAM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the dark matter (dm) component.
+
+    Inherits update_parameters , _f_stell & _f_bd from Initialiser.
+    """
+
+    def __init__(self, )
+
+    
+        
