@@ -209,7 +209,7 @@ class StellarProfile(Initialiser_SAM):
     """
 
     
-    def _real(self, cosmo, r, M, scale_a=1, xDel_ratio = 1/0.03):
+    def _real(self, cosmo, r, M, scale_a=1):
         """ X
         """
         r_use = np.atleast_1d(r)
@@ -374,14 +374,14 @@ class GasProfile(Initialiser_SAM):
         self._fourier = self._fourier_numerical
     self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
 
-    def _real(self, cosmo, r, M, scale_a=1, 
+    def _real(self, cosmo, r, M, scale_a=1, truncate=True, no_prefix=False, 
               # call_interp=True, 
               no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
 
         # the mass fractions are now included in the individual profiles
-        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a)#, call_interp, no_fraction)
+        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a, truncate, no_prefix)#, no_fraction)
         prof_stell = self.stellProfile._real(cosmo, r, M, scale_a)#, no_fraction)
-        prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a)#, no_fraction) 
+        prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
 
         prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
         
@@ -392,7 +392,7 @@ class GasProfile(Initialiser_SAM):
                 fraction_sum += choose_fracs[i]
            # if fraction_sum != 1:
             #    raise Exception("The mass fractions of the chosen components must sum up to 1 for normalisation.")
-            # maybe replace with a warning if fraction_sum > 1
+    # maybe replace with a warning if fraction_sum > 1
 
             chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
             for i, key in enumerate(choose_fracs):
