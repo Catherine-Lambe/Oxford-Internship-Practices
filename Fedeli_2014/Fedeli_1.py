@@ -411,11 +411,11 @@ class GasProfile(Initialiser_SAM):
 
         return prof_array
         
-def _fourier_analytic(self, k, M, scale_a=1, 
+def _fourier_analytic(self, k, M, scale_a=1, interpol_true=True, k2=np.geomspace([1E-2, 9E1, 100]), no_prefix=False,
                       no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
         
         # the mass fractions are now included in the individual profiles, unless no_fraction=True
-        prof_gas = self.gasProfile._fourier(k, M, scale_a, no_fraction)  # ? [0]
+        prof_gas = self.gasProfile._fourier(k, M, scale_a, interpol_true, k2, no_prefix, no_fraction)  # ? [0]
 
    # _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False)
         prof_stell = self.stellProfile._fourier(k, M, scale_a)#, no_fraction)  
