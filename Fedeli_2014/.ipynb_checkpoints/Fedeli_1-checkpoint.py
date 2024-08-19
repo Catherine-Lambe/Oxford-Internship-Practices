@@ -232,7 +232,7 @@ class StellarProfile(Initialiser_SAM):
         nu_alpha = 1 - (2 / self.alpha)
         # Using E_1 = int^infty_1 e^{-xt} * t dt = (e^{-x}*(x+1))/(x^2), assuming x = alpha here
         rho_t_bracket = gamma(1 - nu_alpha) - (x_delta**2)*(x_delta**self.alpha)*(np.exp(-nu_alpha)*(nu_alpha+1))/(nu_alpha**2)
-        rho_t = M_use*f_stell*self.alpha / (4*np.pi*(r_t**3) * rho_t_bracket)
+        rho_t = M_use*f*self.alpha / (4*np.pi*(r_t**3) * rho_t_bracket)
 
         x = r_use[None, :] / r_t[:, None]
         prefix = rho_t * f
@@ -271,14 +271,14 @@ class GasProfile(Initialiser_SAM):
             r_c = r_vir / x_delta
 
         rho_bracket = (x_delta**3) * hyp2f1(3/2, 3*self.beta/2, 5/2, -(x_delta**2))
-        rho_c = 3 * M_use * f_gas / (4 * np.pi * (r_c**3) * rho_bracket)
+        rho_c = 3 * M_use * f / (4 * np.pi * (r_c**3) * rho_bracket)
         
         x = r_use[None, :] / r_c[:, None]
 
         if no_prefix is True:
             prof = 1/( (1 + x**2)**(3*self.beta/2) )
         else:
-            prefix = rho_c * f
+            prefix = rho_c # * f # why is this here twice?
             prof = prefix[:, None] / ((1 + x**2 )**(3 * self.beta / 2) )
 
         if truncate is True:
@@ -314,7 +314,7 @@ class GasProfile(Initialiser_SAM):
             func_fourier = interpol.interp1d(k_list, I0_array) 
         return func_fourier
     
-    def _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False): 
+    def _fourier_numerical(self, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False): 
         """ X
         """
         k_use = np.atleast_1d(k)
@@ -370,8 +370,9 @@ class SAM_Profile(Initialiser_SAM):
         else:
             self.m_0g = m_0g_prefix/self.cosmo['h']  # come back to
         
-   #     if fourier_analytic is True and self.__class__.__name__ == 'CDMProfile':
-    #        self._fourier = self._fourier_analytic
+        if fourier_analytic is True: #and self.__class__.__name__ == 'CDMProfile':
+            # even though stellar has no fourier case
+            self._fourier = self._fourier_analytic
      #   if fourier_numerical is True and self.__class__.__name__ == 'GasProfile':
       #      self._fourier = self._fourier_numerical
         # MIGHT NOT NEED THESE LINES (should automatically be called with the below profiles in their inits)
@@ -421,7 +422,8 @@ class SAM_Profile(Initialiser_SAM):
         prof_gas = self.gasProfile._fourier(k, M, scale_a, interpol_true, k2, no_prefix, no_fraction)  # ? [0]
 
    # _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False)
-        prof_stell = self.stellProfile._fourier(k, M, scale_a)#, no_fraction)  
+        prof_stell = self.stellProfile.fourier(self.cosmo, k, M, scale_a)#, no_fraction)  
+        # as no analytical => ._fourier -> .fourier(cosmo, k, M, a)
     # stellar has no analytic fourier, so it has no no_fraction option (as it's set to default in ._real)
     # mighy have to move no_fraction to a .self, & then have it changed w/update_parameters (could have an if/else that calls that)
         prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
