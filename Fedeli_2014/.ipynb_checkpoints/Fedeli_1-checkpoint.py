@@ -1,4 +1,4 @@
-__all__ = ("Initialiser_SAM", "StellarProfile", "GasProfile", "CDMProfile" , "SAMProfile")
+__all__ = ("Initialiser_SAM", "StellarProfile", "GasProfile", "CDMProfile" , "SAM_Profile")
 
 import numpy as np
 import pyccl as ccl
@@ -346,7 +346,7 @@ class GasProfile(Initialiser_SAM):
             prof = np.squeeze(prof, axis=0)
         return prof
 
-class SAMProfile(Initialiser_SAM):
+class SAM_Profile(Initialiser_SAM):
     """Combined profile for the stellar & gas & cdm components (ie- Fedeli 2014's SAM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the dark matter (dm) component.
 
     Inherits update_parameters , _f_stell & _f_bd from Initialiser.
@@ -355,7 +355,7 @@ class SAMProfile(Initialiser_SAM):
 
     def __init__(self, cosmo, mass_def, mass_func, concentration, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None, m_0g=None, truncated=True, fourier_analytic=True, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
 
-        super(SAMProfile, self).__init__(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star, m_0g=m_0g, truncated=truncated, fourier_analytic=fourier_analytic, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
+        super(SAM_Profile, self).__init__(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star, m_0g=m_0g, truncated=truncated, fourier_analytic=fourier_analytic, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
 
         if m_0s is not None:
             self.m_0s = m_0s
@@ -369,15 +369,14 @@ class SAMProfile(Initialiser_SAM):
             self.m_0g = m_0g
         else:
             self.m_0g = m_0g_prefix/self.cosmo['h']  # come back to
-        print(fourier_analytic)
         
-        if fourier_analytic is True and self.__class__.__name__ == 'CDMProfile':
-            self._fourier = self._fourier_analytic
-        if fourier_numerical is True and self.__class__.__name__ == 'GasProfile':
-            self._fourier = self._fourier_numerical
+   #     if fourier_analytic is True and self.__class__.__name__ == 'CDMProfile':
+    #        self._fourier = self._fourier_analytic
+     #   if fourier_numerical is True and self.__class__.__name__ == 'GasProfile':
+      #      self._fourier = self._fourier_numerical
         # MIGHT NOT NEED THESE LINES (should automatically be called with the below profiles in their inits)
 
-        self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
+       # self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
         
         self.gasProfile = GasProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
         self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star)
