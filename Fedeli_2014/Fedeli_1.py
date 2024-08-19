@@ -209,14 +209,17 @@ class StellarProfile(Initialiser_SAM):
     """
 
     
-    def _real(self, cosmo, r, M, scale_a=1):
+    def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         """ X
         """
         r_use = np.atleast_1d(r)
         M_use = np.atleast_1d(M)
 
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        f_stell = self._f_stell(M_use)
+        if no_fraction is True:
+            f = 1
+        else:
+            f = self._f_stell(M_use)
         
         if self.xDelta_stel is None:
             r_t = self.r_t
@@ -232,7 +235,7 @@ class StellarProfile(Initialiser_SAM):
         rho_t = M_use*f_stell*self.alpha / (4*np.pi*(r_t**3) * rho_t_bracket)
 
         x = r_use[None, :] / r_t[:, None]
-        prefix = rho_t * f_stell 
+        prefix = rho_t * f
         prof = prefix[:, None] * np.exp(-x**self.alpha)/x 
 
         if np.ndim(r) == 0:
@@ -246,7 +249,7 @@ class GasProfile(Initialiser_SAM):
     """
    
     def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
-              no_prefix=False): 
+              no_prefix=False, no_fraction=False): 
         """ X
         """
         
@@ -254,7 +257,10 @@ class GasProfile(Initialiser_SAM):
         M_use = np.atleast_1d(M)
 
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        f_gas = self._f_gas(M_use)
+        if no_fraction is True:
+            f = 1
+        else:
+            f = self._f_gas(M_use)
 
         if self.xDelta_gas is None:
             x_delta = r_vir / self.r_c # use the inputted value of r_c
@@ -272,7 +278,7 @@ class GasProfile(Initialiser_SAM):
         if no_prefix is True:
             prof = 1/( (1 + x**2)**(3*self.beta/2) )
         else:
-            prefix = rho_c * f_gas 
+            prefix = rho_c * f
             prof = prefix[:, None] / ((1 + x**2 )**(3 * self.beta / 2) )
 
         if truncate is True:
@@ -285,15 +291,15 @@ class GasProfile(Initialiser_SAM):
             prof = np.squeeze(prof, axis=0)
         return prof
 
-    def _fourier_integral(self, x, M, r_vir, cosmo, scale_a=1, no_prefix=False):
+    def _fourier_integral(self, x, M, r_vir, cosmo, scale_a=1, no_prefix=False, no_fraction=False):
         """ Function to integrate for the Fedeli Fourier transform: 
         prof_fourier(k) = prof_real * x, integrated over x from 0 to 1, weighted by sin(k * R_delta * x) 
         & multiplied by prefix of 4*pi*R_delta^2 / k"""
-        prof_real = self._real(cosmo=cosmo, r=x*r_vir, M=M, scale_a=scale_a, no_prefix=no_prefix)
+        prof_real = self._real(cosmo=cosmo, r=x*r_vir, M=M, scale_a=scale_a, no_prefix=no_prefix, no_fraction=no_fraction)
         integral = prof_real * x
         return integral
 
-    def _interpol_fourier(self, M_array, cosmo, scale_a=1, no_prefix=False):  
+    def _interpol_fourier(self, M_array, cosmo, scale_a=1, no_prefix=False, no_fraction=False):  
         # interpolator for Fedeli's Fourier interpolator, over k
         k_list = np.geomspace(self.krange[0], self.krange[1], self.nk) 
         I0_array = np.zeros((len(M_array), self.nk))
@@ -303,12 +309,12 @@ class GasProfile(Initialiser_SAM):
             r_vir = self.mass_def.get_radius(cosmo, mass, scale_a) / scale_a  
             for j, k_value in enumerate(k_list):
                 int_bob = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], 
-                                         args=(mass, r_vir, cosmo, scale_a, no_prefix), weight="sin", wvar=r_vir*k_value)[0] 
+                                    args=(mass, r_vir, cosmo, scale_a, no_prefix, no_fraction), weight="sin", wvar=r_vir*k_value)[0] 
                 I0_array[i, j] = int_bob * 4 * np.pi * (r_vir **2) / k_value
             func_fourier = interpol.interp1d(k_list, I0_array) 
         return func_fourier
     
-    def _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False): 
+    def _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False): 
         """ X
         """
         k_use = np.atleast_1d(k)
@@ -320,7 +326,7 @@ class GasProfile(Initialiser_SAM):
         if interpol_true is True:
             if self._func_fourier is None:
                 with UnlockInstance(self):
-                    self._func_fourier = self._interpol_fourier(M_use, self.cosmo, scale_a, no_prefix) 
+                    self._func_fourier = self._interpol_fourier(M_use, self.cosmo, scale_a, no_prefix, no_fraction) 
         # giving it the Masses above when setting up the profile
             prof = self._func_fourier(k_use)
             
@@ -330,7 +336,7 @@ class GasProfile(Initialiser_SAM):
             for i, mass in enumerate(M_use):
                 for j, k_value in enumerate(k_use):
                     integrated = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], 
-                                        args=(mass, r_vir[i], self.cosmo, scale_a, no_prefix), weight="sin", wvar=r_vir[i]*k_value)[0]
+                            args=(mass, r_vir[i], self.cosmo, scale_a, no_prefix, no_fraction), weight="sin", wvar=r_vir[i]*k_value)[0]
                     prof_array[i,j] = integrated * 4 * np.pi * (r_vir[i] **2) / k_value
             prof = prof_array
             
@@ -379,8 +385,8 @@ class GasProfile(Initialiser_SAM):
               no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
 
         # the mass fractions are now included in the individual profiles
-        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a, truncate, no_prefix)#, no_fraction)
-        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a)#, no_fraction)
+        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a, truncate, no_prefix, no_fraction)
+        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, no_fraction)
         prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
 
         prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
@@ -409,8 +415,12 @@ def _fourier_analytic(self, k, M, scale_a=1,
                       no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
         
         # the mass fractions are now included in the individual profiles, unless no_fraction=True
-        prof_gas = self.gasProfile._fourier(k, M, scale_a, no_fraction)
-        prof_stell = self.stellProfile._fourier(k, M, scale_a, no_fraction)  # ? [0]
+        prof_gas = self.gasProfile._fourier(k, M, scale_a, no_fraction)  # ? [0]
+
+   # _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False)
+        prof_stell = self.stellProfile._fourier(k, M, scale_a)#, no_fraction)  
+    # stellar has no analytic fourier, so it has no no_fraction option (as it's set to default in ._real)
+    # mighy have to move no_fraction to a .self, & then have it changed w/update_parameters (could have an if/else that calls that)
         prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
     
         prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}

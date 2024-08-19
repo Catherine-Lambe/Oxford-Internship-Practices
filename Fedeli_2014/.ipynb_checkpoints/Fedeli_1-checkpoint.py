@@ -209,14 +209,17 @@ class StellarProfile(Initialiser_SAM):
     """
 
     
-    def _real(self, cosmo, r, M, scale_a=1):
+    def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         """ X
         """
         r_use = np.atleast_1d(r)
         M_use = np.atleast_1d(M)
 
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        f_stell = self._f_stell(M_use)
+        if no_fraction is True:
+            f = 1
+        else:
+            f = self._f_stell(M_use)
         
         if self.xDelta_stel is None:
             r_t = self.r_t
@@ -232,7 +235,7 @@ class StellarProfile(Initialiser_SAM):
         rho_t = M_use*f_stell*self.alpha / (4*np.pi*(r_t**3) * rho_t_bracket)
 
         x = r_use[None, :] / r_t[:, None]
-        prefix = rho_t * f_stell 
+        prefix = rho_t * f
         prof = prefix[:, None] * np.exp(-x**self.alpha)/x 
 
         if np.ndim(r) == 0:
@@ -246,7 +249,7 @@ class GasProfile(Initialiser_SAM):
     """
    
     def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
-              no_prefix=False): 
+              no_prefix=False, no_fraction=False): 
         """ X
         """
         
@@ -254,7 +257,10 @@ class GasProfile(Initialiser_SAM):
         M_use = np.atleast_1d(M)
 
         r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        f_gas = self._f_gas(M_use)
+        if no_fraction is True:
+            f = 1
+        else:
+            f = self._f_gas(M_use)
 
         if self.xDelta_gas is None:
             x_delta = r_vir / self.r_c # use the inputted value of r_c
@@ -272,7 +278,7 @@ class GasProfile(Initialiser_SAM):
         if no_prefix is True:
             prof = 1/( (1 + x**2)**(3*self.beta/2) )
         else:
-            prefix = rho_c * f_gas 
+            prefix = rho_c * f
             prof = prefix[:, None] / ((1 + x**2 )**(3 * self.beta / 2) )
 
         if truncate is True:
@@ -379,8 +385,8 @@ class GasProfile(Initialiser_SAM):
               no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
 
         # the mass fractions are now included in the individual profiles
-        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a, truncate, no_prefix)#, no_fraction)
-        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a)#, no_fraction)
+        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a, truncate, no_prefix, no_fraction)
+        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, no_fraction)
         prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
 
         prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
@@ -411,6 +417,7 @@ def _fourier_analytic(self, k, M, scale_a=1,
         # the mass fractions are now included in the individual profiles, unless no_fraction=True
         prof_gas = self.gasProfile._fourier(k, M, scale_a, no_fraction)
         prof_stell = self.stellProfile._fourier(k, M, scale_a, no_fraction)  # ? [0]
+    # stellar has no analytic fourier, so it has no no_fraction option (as it's set to default in ._real)
         prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
     
         prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
