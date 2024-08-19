@@ -1,3 +1,75 @@
+# PUT BACK INTO MAIN!!!
+
+
+
+
+
+    def _real(self, cosmo, r, M, scale_a=1, truncate=True, no_prefix=False, 
+              # call_interp=True, 
+              no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
+
+        # the mass fractions are now included in the individual profiles
+        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a, truncate, no_prefix, no_fraction)
+        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a, no_fraction)
+        prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a, no_fraction) 
+
+        prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
+        
+        if no_fraction is True:
+            print("The chosen components with their respective mass fractions are: ", choose_fracs)
+            fraction_sum = 0
+            for i in choose_fracs:
+                fraction_sum += choose_fracs[i]
+           # if fraction_sum != 1:
+            #    raise Exception("The mass fractions of the chosen components must sum up to 1 for normalisation.")
+    # maybe replace with a warning if fraction_sum > 1
+
+            chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
+            for i, key in enumerate(choose_fracs):
+                chosen_prof = prof_dict[key]*choose_fracs[key]
+                chosen_prof_array[i] = chosen_prof
+            prof_array = np.sum(chosen_prof_array)
+
+        else:
+            prof_array = np.sum(np.array([prof_gas, prof_stell, prof_cdm]), axis=0)
+
+        return prof_array
+        
+def _fourier_analytic(self, k, M, scale_a=1, interpol_true=True, k2=np.geomspace([1E-2, 9E1, 100]), no_prefix=False,
+                      no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
+        
+        # the mass fractions are now included in the individual profiles, unless no_fraction=True
+        prof_gas = self.gasProfile._fourier(k, M, scale_a, interpol_true, k2, no_prefix, no_fraction)  # ? [0]
+
+   # _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False)
+        prof_stell = self.stellProfile._fourier(k, M, scale_a)#, no_fraction)  
+    # stellar has no analytic fourier, so it has no no_fraction option (as it's set to default in ._real)
+    # mighy have to move no_fraction to a .self, & then have it changed w/update_parameters (could have an if/else that calls that)
+        prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
+    
+        prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
+        
+        if no_fraction is True:
+            print("The chosen components with their respective mass fractions are: ", choose_fracs)
+            fraction_sum = 0
+            for i in choose_fracs:
+                fraction_sum += choose_fracs[i]
+         #   if fraction_sum != 1:
+          #      raise Exception("The mass fractions of the chosen components must sum up to 1 for normalisation.")
+
+            chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
+            for i, key in enumerate(choose_fracs):
+                chosen_prof = prof_dict[key]*choose_fracs[key]
+                chosen_prof_array[i] = chosen_prof
+            prof_array = np.sum(chosen_prof_array)
+
+        else:
+            prof_array = np.sum(np.array([prof_gas, prof_stell, prof_cdm]), axis=0)
+
+        return prof_array
+
+#####
+
 __all__ = ("SAM_Initialiser", "StellarProfile", "GasProfile", "CDMProfile" , "SAMProfile")
 
 import numpy as np
