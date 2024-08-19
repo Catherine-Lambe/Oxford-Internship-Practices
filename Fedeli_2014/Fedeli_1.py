@@ -350,17 +350,62 @@ class GasProfile(Initialiser_SAM):
     def __init__(self, cosmo, mass_def, mass_func, concentration, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None, m_0g=None, truncated=True, fourier_analytic=True, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
 
         super(SAMProfile, self).__init__(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star, m_0g=m_0g, truncated=truncated, fourier_analytic=fourier_analytic, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
+
+        if m_0s is not None:
+            self.m_0s = m_0s
+        else:
+            self.m_0s = m_0s_prefix/self.cosmo['h'] # come back to
+        if rho_avg_star is not None:
+            self.rho_avg_star = rho_avg_star
+        else:
+            self.rho_avg_star = rho_avg_star_prefix**self.cosmo['h']**2 # come back to
+        if m_0g is not None:
+            self.m_0g = m_0g
+        else:
+            self.m_0g = m_0g_prefix/self.cosmo['h']  # come back to
         
         self.gasProfile = GasProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
         self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star)
         self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, truncated=truncated, fourier_analytic=fourier_analytic)
 
-   #     if fourier_analytic is True:
-    #        self._fourier = self._fourier_analytic
-            
-     #   self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
-      #  self._func_normQany = None
+    if fourier_analytic is True and self.__class__.__name__ == 'CDMProfile':
+        self._fourier = self._fourier_analytic
+    if fourier_numerical is True and self.__class__.__name__ == 'GasProfile':
+        self._fourier = self._fourier_numerical
+    self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
 
+    def _real(self, cosmo, r, M, scale_a=1, 
+              # call_interp=True, 
+              no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
+
+        # the mass fractions are now included in the individual profiles
+        prof_gas = self.gasProfile._real(cosmo, r, M, scale_a)#, call_interp, no_fraction)
+        prof_stell = self.stellProfile._real(cosmo, r, M, scale_a)#, no_fraction)
+        prof_cdm = self.cdmProfile._real(cosmo, r, M, scale_a)#, no_fraction) 
+
+        prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
+        
+        if no_fraction is True:
+            print("The chosen components with their respective mass fractions are: ", choose_fracs)
+            fraction_sum = 0
+            for i in choose_fracs:
+                fraction_sum += choose_fracs[i]
+           # if fraction_sum != 1:
+            #    raise Exception("The mass fractions of the chosen components must sum up to 1 for normalisation.")
+            # maybe replace with a warning if fraction_sum > 1
+
+            chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
+            for i, key in enumerate(choose_fracs):
+                chosen_prof = prof_dict[key]*choose_fracs[key]
+                chosen_prof_array[i] = chosen_prof
+            prof_array = np.sum(chosen_prof_array)
+
+        else:
+            prof_array = np.sum(np.array([prof_gas, prof_stell, prof_cdm]), axis=0)
+
+        return prof_array
+
+        
 
     
         
