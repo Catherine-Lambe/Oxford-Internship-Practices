@@ -455,9 +455,10 @@ class BCMProfile(BCM_Initialiser):
         prof_bd = self.boundProfile._fourier(k, M, scale_a, no_fraction)
         prof_stell = self.stellProfile._fourier(k, M, scale_a, no_fraction)  
         prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
+
+        prof_dict = {'ejected': prof_ej, 'bound': prof_bd[0], 'stellar': prof_stell, 'cdm': prof_cdm}
         
         if no_fraction is True:
-            prof_dict = {'ejected': prof_ej, 'bound': prof_bd[0], 'stellar': prof_stell, 'cdm': prof_cdm}
             print("The chosen components with their respective mass fractions are: ", choose_fracs)
             fraction_sum = 0
             for i in choose_fracs:

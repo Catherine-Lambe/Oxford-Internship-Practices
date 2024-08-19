@@ -404,8 +404,34 @@ class GasProfile(Initialiser_SAM):
             prof_array = np.sum(np.array([prof_gas, prof_stell, prof_cdm]), axis=0)
 
         return prof_array
-
         
-
+def _fourier_analytic(self, k, M, scale_a=1, 
+                      no_fraction=False, choose_fracs={'gas': 1, 'stellar': 1, 'cdm': 1}):
+        
+        # the mass fractions are now included in the individual profiles, unless no_fraction=True
+        prof_gas = self.gasProfile._fourier(k, M, scale_a, no_fraction)
+        prof_stell = self.stellProfile._fourier(k, M, scale_a, no_fraction)  # ? [0]
+        prof_cdm = self.cdmProfile._fourier(k, M, scale_a, no_fraction) 
     
+        prof_dict = {'gas': prof_gas, 'stellar': prof_stell, 'cdm': prof_cdm}
+        
+        if no_fraction is True:
+            print("The chosen components with their respective mass fractions are: ", choose_fracs)
+            fraction_sum = 0
+            for i in choose_fracs:
+                fraction_sum += choose_fracs[i]
+         #   if fraction_sum != 1:
+          #      raise Exception("The mass fractions of the chosen components must sum up to 1 for normalisation.")
+
+            chosen_prof_array = np.zeros(len(prof_dict), dtype=object)
+            for i, key in enumerate(choose_fracs):
+                chosen_prof = prof_dict[key]*choose_fracs[key]
+                chosen_prof_array[i] = chosen_prof
+            prof_array = np.sum(chosen_prof_array)
+
+        else:
+            prof_array = np.sum(np.array([prof_gas#[0], 
+                                          prof_stell, prof_cdm]), axis=0)
+
+        return prof_array
         
