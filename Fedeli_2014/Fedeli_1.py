@@ -100,7 +100,7 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         return f_array
 
         ### UPDATE_PARAMETERS
-    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, , sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None, limInt=None, nk=None, krange=None, truncate_param=None):
+    def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None, limInt=None, nk=None, krange=None, truncate_param=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
@@ -369,6 +369,7 @@ class GasProfile(Initialiser_SAM):
             self.m_0g = m_0g
         else:
             self.m_0g = m_0g_prefix/self.cosmo['h']  # come back to
+        print(fourier_analytic)
         
         self.gasProfile = GasProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
         self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star)
@@ -440,8 +441,7 @@ def _fourier_analytic(self, k, M, scale_a=1, interpol_true=True, k2=np.geomspace
             prof_array = np.sum(chosen_prof_array)
 
         else:
-            prof_array = np.sum(np.array([prof_gas#[0], 
-                                          prof_stell, prof_cdm]), axis=0)
+            prof_array = np.sum(np.array([prof_gas, prof_stell, prof_cdm]), axis=0)
 
         return prof_array
         
