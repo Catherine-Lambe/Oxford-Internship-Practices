@@ -351,9 +351,9 @@ class GasProfile(Initialiser_SAM):
 
         super(SAMProfile, self).__init__(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star, m_0g=m_0g, truncated=truncated, fourier_analytic=fourier_analytic, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
         
-     #   self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, gammaRange=gammaRange, ngamma=ngamma, qrange=qrange, nq=nq, limInt=limInt, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-     #   self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
-     #   self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, truncated=truncated)
+        self.gasProfile = GasProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
+        self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star)
+        self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, truncated=truncated, fourier_analytic=fourier_analytic)
 
    #     if fourier_analytic is True:
     #        self._fourier = self._fourier_analytic
