@@ -235,8 +235,8 @@ class StellarProfile(Initialiser_SAM):
         rho_t = M_use*f*self.alpha / (4*np.pi*(r_t**3) * rho_t_bracket)
 
         x = r_use[None, :] / r_t[:, None]
-        prefix = rho_t * f
-        prof = prefix[:, None] * np.exp(-x**self.alpha)/x 
+       # prefix = rho_t
+        prof = rho_t[:, None] * np.exp(-x**self.alpha)/x # prefix[:, None] * np.exp(-x**self.alpha)/x 
 
         if np.ndim(r) == 0:
             prof = np.squeeze(prof, axis=-1)
@@ -278,8 +278,8 @@ class GasProfile(Initialiser_SAM):
         if no_prefix is True:
             prof = 1/( (1 + x**2)**(3*self.beta/2) )
         else:
-            prefix = rho_c # * f # why is this here twice?
-            prof = prefix[:, None] / ((1 + x**2 )**(3 * self.beta / 2) )
+          #  prefix = rho_c 
+            prof = rho_c[:, None] / ((1 + x**2 )**(3 * self.beta / 2) ) # prefix[:, None] / ((1 + x**2 )**(3 * self.beta / 2) )
 
         if truncate is True:
             RVIR, R = np.meshgrid(self.truncate_param*r_vir, r_use)
