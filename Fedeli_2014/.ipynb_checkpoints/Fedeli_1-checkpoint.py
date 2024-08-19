@@ -344,9 +344,23 @@ class GasProfile(Initialiser_SAM):
         """Combined profile for the stellar & gas & cdm components (ie- Fedeli 2014's SAM Model), with the truncated Navarro-Frenk-White (NFW) profile used to calculate the density profiles of the dark matter (dm) component.
 
     Inherits update_parameters , _f_stell & _f_bd from Initialiser.
+        
     """
 
-    def __init__(self, )
+    def __init__(self, cosmo, mass_def, mass_func, concentration, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None, m_0g=None, truncated=True, fourier_analytic=True, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
+
+        super(SAMProfile, self).__init__(cosmo=cosmo, mass_def=mass_def, mass_func=mass_func, concentration=concentration, alpha=alpha, r_t=r_t, xDelta_stel=xDelta_stel, m_0s_prefix=m_0s_prefix, sigma_s=sigma_s, rho_avg_star_prefix=rho_avg_star_prefix, limInt_mStell=limInt_mStell, m_0s=m_0s, rho_avg_star=rho_avg_star, m_0g=m_0g, truncated=truncated, fourier_analytic=fourier_analytic, fourier_numerical=fourier_numerical, beta=beta, r_c=r_c, xDelta_gas=xDelta_gas, limInt=limInt, nk=nk, krange=krange, m_0g_prefix=m_0g_prefix, sigma_g=sigma_g, truncate_param=truncate_param)
+        
+     #   self.boundProfile = BoundGasProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, gammaRange=gammaRange, ngamma=ngamma, qrange=qrange, nq=nq, limInt=limInt, beta=beta, M_c=M_c, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
+     #   self.stellProfile = StellarProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, M_star=M_star, A_star=A_star, sigma_star=sigma_star)
+     #   self.cdmProfile = CDMProfile(cosmo=cosmo, mass_def=mass_def, concentration=concentration, Gamma=Gamma, fourier_analytic=fourier_analytic, truncated=truncated)
+
+   #     if fourier_analytic is True:
+    #        self._fourier = self._fourier_analytic
+            
+     #   self._func_normQ0 = None   # General normalised bound profile (for q=0, over Gamma)
+      #  self._func_normQany = None
+
 
     
         
