@@ -174,11 +174,23 @@ class CDMProfile(BCM_Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW):
     
     """
 
+    def __init__(self, ):
+        #####
+        #####
+
+    def update_parameters(self, ):
+        #####
+        #####
+
+    def _f_cdm(self, cosmo):
+        f_c = 1 - cosmo['Omega_b']/cosmo['Omega_m']   # f_bar_b = 1 - f_c = cosmo['Omega_b']/cosmo['Omega_m']
+        return f_c
+
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         if no_fraction is True:
             f = 1
         else:
-            f = self.f_c
+            f = self._f_cdm(cosmo)
         prof = f * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
         return prof
 
@@ -186,7 +198,7 @@ class CDMProfile(BCM_Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW):
         if no_fraction is True:
             f = 1
         else:
-            f = self.f_c
+            f = self._f_cdm(cosmo)
         prof = f * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
         return prof
 
@@ -204,6 +216,18 @@ class StellarProfile(BCM_Initialiser):
 
     To do later: Change real profile of stellar from delta function to (...)
     """ 
+
+    def __init__(self, ):
+        ####
+        ####
+
+    def update_parameters(self, ):
+        ####
+        ####
+
+    def _f_stell(self, M):
+        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
+        return f_stell
 
     # To do later: Change real profile of stellar from delta function to (...)
     def _real(self, cosmo, r, M, scale_a=1, centre_pt=None, no_fraction=False): 
@@ -247,10 +271,17 @@ class StellarProfile(BCM_Initialiser):
 class EjectedGasProfile(BCM_Initialiser): 
     """Creating a class for the ejected gas density profile
     where: 
-    
-    Inherits __init__ , update_parameters, _f_stell, & _f_bd from Initialiser. """  
+    """  
 
-            
+    
+
+    def _f_ej(self, cosmo, M):
+        """ f_ej = self.f_bar_b - f_stell - f_bd. f_bar_b = cosmo['Omega_b']/cosmo['Omega_m'"""
+        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
+        f_bd = (cosmo['Omega_b']/cosmo['Omega_m'] - f_stell) / (1 + (self.M_c / M)**self.beta )
+        f_ej = cosmo['Omega_b']/cosmo['Omega_m'] - f_stell - f_bd
+        return f_ej
+
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
@@ -260,8 +291,7 @@ class EjectedGasProfile(BCM_Initialiser):
         if no_fraction is True:
             f = 1
         else:
-            f_bd, f_stell = self._f_bd(M)
-            f = self.f_bar_b - f_stell - f_bd # f = f_ej
+            f = self._f_ej(cosmo, M_use)
         prefix = f * M_use / (scale_a*r_e*np.sqrt(2*np.pi))**3  
         x = r_use[None, :] / r_e[:, None]
         prof = prefix[:, None] * np.exp(-(x**2)/2)
@@ -282,8 +312,7 @@ class EjectedGasProfile(BCM_Initialiser):
         if no_fraction is True:
             f = 1
         else:
-            f_bd, f_stell = self._f_bd(M)
-            f = self.f_bar_b - f_stell - f_bd # f = f_ej
+            f = self._f_ej(cosmo, M_use)
         prefix = f * M_use / scale_a**3
         x = k_use[None, :] * r_e[:, None]
         prof = prefix[:, None] * np.exp(-(x**2)/2)  
@@ -320,6 +349,12 @@ class BoundGasProfile(BCM_Initialiser):
 
     Inherits __init__ , update_parameters, _f_stell & _f_bd methods from Initialiser parent class.    
     """  
+
+    def _f_bd(self, cosmo, M): 
+        """f_bd requires f_stell, hence the self.X_star parameters, f_bar_b = cosmo['Omega_b']/cosmo['Omega_m'"""
+        f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
+        f_bd = (cosmo['Omega_b']/cosmo['Omega_m'] - f_stell) / (1 + (self.M_c / M)**self.beta )
+        return f_bd
     
     def _shape(self, x, gam):
         gam_use = np.atleast_1d(gam)
@@ -361,8 +396,7 @@ class BoundGasProfile(BCM_Initialiser):
         if no_fraction is True:
             f = 1
         else:
-            f_bd, f_stell = self._f_bd(M)
-            f = f_bd # f = f_bd
+            f = self._f_bd(cosmo, M_use)
         prefix = f * M_use * (1/scale_a**3) * (1/vB_prefix)
 
         x = r_use[None, :] / r_s[:, None]
@@ -413,8 +447,7 @@ class BoundGasProfile(BCM_Initialiser):
         if no_fraction is True:
             f = 1
         else:
-            f_bd, f_stell = self._f_bd(M)
-            f = f_bd # f = f_bd
+            f = self._f_bd(cosmo, M_use)
         prefix = f * M_use / scale_a**3
         prof = prefix[:, None] * g_k[None,:] 
 
