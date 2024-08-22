@@ -9,7 +9,8 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
 
     def update_parameters(self, **kwargs):
 
-        params = self.divide_params(**kwargs)
+        params = # self.divide_params(**kwargs)
+        # what function is this, in Inspect ?
 
         for prof, pars in zip(self.prof_list, params)
             prof.update_parameters(**pars)
