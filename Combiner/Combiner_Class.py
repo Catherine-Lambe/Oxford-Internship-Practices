@@ -5,6 +5,8 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
     def __init__(self, prof_list):
         # prof_list = [p1, p2, p3, ...] // = [stel_prof, cdm_prof, gas_prof, ej_prof]
         self.prof_list = prof_list
+
+        self.param_list = []
         ####
     def divide_param
 
