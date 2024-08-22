@@ -1,4 +1,4 @@
-__all__ = ("StellarProfileSAM", "SAMGasProfile", "CDMProfile")
+__all__ = ("StellarProfileSAM", "GasProfileSAM", "CDMProfile")
 
 import numpy as np
 import pyccl as ccl
@@ -59,7 +59,7 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile): #ccl.halos.profil
         return prof
 
 
-class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
+class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
@@ -179,11 +179,11 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
             prof = np.squeeze(prof, axis=0)
         return prof
 
-class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
+class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Gas halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
-    def __init__(self,mass_def, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g=None, m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
+    def __init__(self, mass_def, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g=None, m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
         super().__init__(mass_def=mass_def)
         self.mass_func = mass_func
         
