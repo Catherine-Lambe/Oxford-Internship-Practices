@@ -47,15 +47,15 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile): #ccl.halos.profil
             f = 1
         else:
             f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
+        prof = f * self.cdmProfile._real(cosmo, r, M, scale_a) 
         return prof
 
-    def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
+    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
         if no_fraction is True:
             f = 1
         else:
             f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
+        prof = f * self.cdmProfile._fourier(cosmo, k, M, scale_a) 
         return prof
 
 
@@ -97,19 +97,19 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
             m_0s = self.m_0s
         return np.exp( (-1/2) * ( np.log10(M/m_0s) /self.sigma_s )**2 )
     
-    def _f_stell_integrand(self, cosmo, M):
+    def _f_stell_integrand(self, M, cosmo):
         # integrand = m * f_star(m) * n(m), where n(m,z) is the standard DM-only halo mass function
         #  DM_mass_func = hmf_200m(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
         DM_mass_func = self.mass_func(cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
         return M * self._f_stell_noA(cosmo, M) * DM_mass_func 
      
     def _f_stell(self, cosmo, M):
-        if rho_avg_star is None:
+        if self.rho_avg_star is None:
             rho_avg_star = self.rho_avg_star_prefix**cosmo['h']**2 
         else:
             rho_avg_star = self.rho_avg_star
         # f_star(m) = A*np.exp( (-1/2) * ( np.log10(m/m_0s) /omega_s )**2 )
-        integrad = integrate.quad(self._f_stell_integrand, self.limInt_mStell[0], self.limInt_mStell[1])  # integrating over m (dm)
+        integrad = integrate.quad(self._f_stell_integrand, self.limInt_mStell[0], self.limInt_mStell[1], args=cosmo)  # integrating over m (dm)
         A = rho_avg_star / integrad[0] 
         return A * self._f_stell_noA(cosmo, M)
 
@@ -207,7 +207,7 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     def _f_gas(self, cosmo, M):
         M_use = np.atleast_1d(M)
         f_array = np.zeros(np.shape(M_use))
-        if m_0g is None:
+        if self.m_0g is None:
             m_0g = self.m_0g_prefix/cosmo['h']
         else:
             m_0g = self.m_0g
@@ -337,7 +337,7 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         M_use = np.atleast_1d(M)
 
         r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        f_gas = self._f_gas(M_use)
+        f_gas = self._f_gas(cosmo, M_use)
 
         if interpol_true is True:
             if self._func_fourier is None:

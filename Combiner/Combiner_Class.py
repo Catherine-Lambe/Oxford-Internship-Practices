@@ -28,7 +28,7 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
     def _real(self, cosmo, r, M, a): # scale_a = 1
         real_list = [prof._real(cosmo, r, M, a) for prof in self.prof_list]
         # apply np.array or np.atleast_1d for this
-        profile = np.sum(np.atleast_1d(real_list))
+        profile = np.sum(np.atleast_1d(real_list), axis=0)
         return profile
     
 
@@ -37,7 +37,7 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
         # could add in to the component profiles that, if fourier_analytic (etc) is called, but there is none, Then: self._fourier = self.fourier (so call CCL)
         fourier_list = [prof._fourier(cosmo, k, M, a) for prof in self.prof_list]
         # apply np.array or np.atleast_1d for this
-        profile = np.sum(np.atleast_1d(fourier_list))
+        profile = np.sum(np.atleast_1d(fourier_list), axis=0)
         return profile
 
 

@@ -8,43 +8,43 @@ import scipy.integrate as integrate
 import scipy.interpolate as interpol
 from pyccl._core import UnlockInstance
 
-class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
-    def __init__(self, *, mass_def, A_star=0.03, sigma_star=1.2, M_star=10**(12.5)):
-        self.A_star = A_star
-        self.sigma_star = sigma_star
-        self.M_star = M_star
-        super().__init__(mass_def=mass_def)
+#class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
+ #   def __init__(self, *, mass_def, A_star=0.03, sigma_star=1.2, M_star=10**(12.5)):
+  #      self.A_star = A_star
+   #     self.sigma_star = sigma_star
+    #    self.M_star = M_star
+     #   super().__init__(mass_def=mass_def)
 
-    def update_parameters(self, M_star=None, A_star=None, sigma_star=None):
-        if M_star is not None:
-            self.M_star = M_star
-        if A_star is not None:
-            self.A_star = A_star
-        if sigma_star is not None:
-            self.sigma_star = sigma_star
+#    def update_parameters(self, M_star=None, A_star=None, sigma_star=None):
+ #       if M_star is not None:
+  #          self.M_star = M_star
+   #     if A_star is not None:
+    #        self.A_star = A_star
+     #   if sigma_star is not None:
+      #      self.sigma_star = sigma_star
 
-    def _real(self, cosmo, r, M, a):
-        pass
+#    def _real(self, cosmo, r, M, a):
+ #       pass
 
-class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
-    def __init__(self, *, mass_def, Gamma=1.2, M_c=10**(13.5), beta=0.6,
-                 gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64,
-                 limInt=(1E-3, 5E3), ):
-        self.Gamma = Gamma
-        self.M_c = M_c
-        self.beta = beta
-        super().__init__(mass_def=mass_def)
+#class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
+ #   def __init__(self, *, mass_def, Gamma=1.2, M_c=10**(13.5), beta=0.6,
+  #               gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64,
+   #              limInt=(1E-3, 5E3), ):
+    #    self.Gamma = Gamma
+     #   self.M_c = M_c
+      #  self.beta = beta
+       # super().__init__(mass_def=mass_def)
 
-    def update_parameters(self, Gamma=None, M_c=None, beta=None):
-        if M_c is not None:
-            self.M_c = M_c
-        if Gamma is not None:
-            self.Gamma = Gamma
-        if beta is not None:
-            self.beta = beta
+#    def update_parameters(self, Gamma=None, M_c=None, beta=None):
+ #       if M_c is not None:
+  #          self.M_c = M_c
+   #     if Gamma is not None:
+    #        self.Gamma = Gamma
+     #   if beta is not None:
+      #      self.beta = beta
 
-    def _real(self, cosmo, r, M, a):
-        pass
+#    def _real(self, cosmo, r, M, a):
+ #       pass
 ################
 
 class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile): 
@@ -86,15 +86,15 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile):
             f = 1
         else:
             f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
+        prof = f * self.cdmProfile._real(cosmo, r, M, scale_a) 
         return prof
 
-    def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
+    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
         if no_fraction is True:
             f = 1
         else:
             f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
+        prof = f * self.cdmProfile._fourier(cosmo, k, M, scale_a) 
         return prof
 
 class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile): 
@@ -159,7 +159,7 @@ class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
                                                           
         return prof
 
-    def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
+    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
@@ -228,7 +228,7 @@ class EjectedGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
-        r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # halo virial radius
+        r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # halo virial radius
         r_e = 0.375*r_vir*np.sqrt(self.delta)*self.eta_b                                    # eta_b = a free parameter
 
         if no_fraction is True:
@@ -246,10 +246,10 @@ class EjectedGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
                                                           
         return prof
 
-    def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
+    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
-        r_vir = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a    # halo virial radius
+        r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # halo virial radius
         r_e = 0.375*r_vir*np.sqrt(self.delta)*self.eta_b                                    # eta_b = a free parameter
 
         if no_fraction is True:
@@ -393,8 +393,8 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
         
-        R_M = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a       # halo virial radius
-        c_M = self.concentration(self.cosmo, M_use, scale_a)                       # concentration-mass relation c(M)
+        R_M = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a       # halo virial radius
+        c_M = self.concentration(cosmo, M_use, scale_a)                       # concentration-mass relation c(M)
         r_s = R_M / c_M                                                            # characteristic scale r_s
 
         if call_interp is False:
@@ -437,12 +437,12 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
         func_normQany = interpol.RegularGridInterpolator((gamma_list, np.log(q_array)), I0_array)
         return func_normQany
     
-    def _fourier_analytic(self, k, M, scale_a=1, no_fraction=False):
+    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
-        R_M = self.mass_def.get_radius(self.cosmo, M_use, scale_a) / scale_a       # halo virial radius
-        c_M = self.concentration(self.cosmo, M_use, scale_a)                       # concentration-mass relation c(M)
+        R_M = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a       # halo virial radius
+        c_M = self.concentration(cosmo, M_use, scale_a)                       # concentration-mass relation c(M)
         r_s = R_M / c_M                                                            # characteristic scale r_s
 
         if self._func_normQ0 is None:
@@ -469,4 +469,4 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
         if np.ndim(M) == 0:
             prof = np.squeeze(prof, axis=0)
 
-        return prof
+        return prof[0]
