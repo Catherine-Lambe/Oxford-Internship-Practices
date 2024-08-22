@@ -8,6 +8,44 @@ import scipy.integrate as integrate
 import scipy.interpolate as interpol
 from pyccl._core import UnlockInstance
 
+class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
+    def __init__(self, *, mass_def, A_star=0.03, sigma_star=1.2, M_star=10**(12.5)):
+        self.A_star = A_star
+        self.sigma_star = sigma_star
+        self.M_star = M_star
+        super().__init__(mass_def=mass_def)
+
+    def update_parameters(self, M_star=None, A_star=None, sigma_star=None):
+        if M_star is not None:
+            self.M_star = M_star
+        if A_star is not None:
+            self.A_star = A_star
+        if sigma_star is not None:
+            self.sigma_star = sigma_star
+
+    def _real(self, cosmo, r, M, a):
+        pass
+
+class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
+    def __init__(self, *, mass_def, Gamma=1.2, M_c=10**(13.5), beta=0.6,
+                 gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64,
+                 limInt=(1E-3, 5E3), ):
+        self.Gamma = Gamma
+        self.M_c = M_c
+        self.beta = beta
+        super().__init__(mass_def=mass_def)
+
+    def update_parameters(self, Gamma=None, M_c=None, beta=None):
+        if M_c is not None:
+            self.M_c = M_c
+        if Gamma is not None:
+            self.Gamma = Gamma
+        if beta is not None:
+            self.beta = beta
+
+    def _real(self, cosmo, r, M, a):
+        pass
+
 class BCM_Initialiser(ccl.halos.profiles.profile_base.HaloProfile):
     """ Contains the __init__ , update_parameters, _f_stell & _f_bd methods to be inherited.
     """
@@ -153,7 +191,7 @@ class CDMProfile(BCM_Initialiser): #ccl.halos.profiles.nfw.HaloProfileNFW):
         return prof
 
 class StellarProfile(BCM_Initialiser): 
-    """Creating a class for the stellar density profile
+    """Creating a class for the stellar density profile \
     where: 
     .. math::
     

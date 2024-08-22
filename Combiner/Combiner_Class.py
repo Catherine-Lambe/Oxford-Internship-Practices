@@ -31,3 +31,29 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
         # apply np.array or np.atleast_1d for this
         profile = np.sum(np.atleast_1d(fourier_list))
     return profile
+
+
+
+class CombinerClassDavid(ccl.halos.profiles.profile_base.HaloProfile):
+    def __init__(self, prof_list):
+        self.prof_list = prof_list
+        self.param_list = []
+        for prof in self.prof_list:
+            arglist = list(prof.update_parameters.__code__.co_varnames)
+            if 'self' in arglist:
+                arglist.remove('self')
+            self.param_list.append(arglist)
+
+    def update_parameters(self, **kwargs):
+        for prof, param_names in zip(self.prof_list, self.param_list):
+            param_dict = {}
+            for name in param_names:
+                if name in kwargs:
+                    param_dict[name] = kwargs[name]
+            prof.update_parameters(**param_dict)
+
+    def _real(self, cosmo, r, M, a):
+        pass
+
+    def _fourier(self, cosmo, k, M, a):
+        pass
