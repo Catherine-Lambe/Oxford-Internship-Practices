@@ -331,8 +331,8 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Gas halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
-    def __init__(self,mass_def, mass_func, concentration, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g=None, m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
-        super().__init__(mass_def=mass_def, concentration=concentration)
+    def __init__(self,mass_def, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g=None, m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
+        super().__init__(mass_def=mass_def)
         self.mass_func = mass_func
         
         self.fourier_numerical = fourier_numerical
@@ -353,7 +353,6 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
         self.nk = nk
         self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
 
-
     def _f_gas(self, cosmo, M):
         M_use = np.atleast_1d(M)
         f_array = np.zeros(np.shape(M_use))
@@ -368,6 +367,51 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
             else:
                 f_array[i] = (cosmo['Omega_b']/cosmo['Omega_m']) * erf(np.log10(mass/m_0g) / self.sigma_g)
         return f_array
+
+    def update_parameters(self, mass_def=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None, limInt=None, nk=None, krange=None, truncate_param=None):
+        """Update any of the parameters associated with this profile.
+        Any parameter set to ``None`` won't be updated.
+        """
+        if mass_def is not None and mass_def != self.mass_def:
+            self.mass_def = mass_def
+            
+        if m_0g is not None and m_0g != self.m_0g:
+            self.m_0g = m_0g
+        if m_0g_prefix is not None and and m_0g_prefix != self.m_0g_prefix:
+            self.m_0g_prefix = m_0g_prefix
+        
+        if beta is not None and beta != self.beta:
+            self.beta = beta
+        if r_c is not None and r_c != self.r_c:
+            self.r_c = M_c
+        if xDelta_gas is not None and xDelta_gas != self.xDelta_gas:
+            self.xDelta_gas = xDelta_gas
+        if sigma_g is not None and sigma_g != self.sigma_g:
+            self.sigma_g = sigma_g
+
+        if fourier_numerical is not None and fourier_numerical is True: 
+            self._fourier = self._fourier_numerical   
+
+        # Check if we need to recompute the (optional) interpolator for the gas
+        re_func_fourier = False   
+        if limInt is not None and limInt != self.limInt:
+            re_normQ0 = True
+            self.limInt = limInt #nq
+        if kRange is not None and kRange != self.kRange:
+            re_func_fourier = True  
+            self.kRange = kRange
+        if nk is not None and nk != self.nk:  
+            re_func_fourier = True
+            self.nk = nk
+        if truncate_param is not None and truncate_param != self.truncate_param:
+            re_func_fourier = True
+            self.truncate_param = truncate_param
+            
+# need to recall the interpolator function for the gas Fourier profile 
+## BUT this relies on calling the real profile (with the given masses, & so on)
+## so instead of recalling the interpolator here: set it to None, so it will be recalculated when the Fourier method is next called
+        if re_func_fourier is True and (self._func_fourier is not None):  
+            self._func_fourier = None
         
     def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
               no_prefix=False, no_fraction=False): 
