@@ -185,7 +185,6 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
 
     def __init__(self, mass_def, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g=None, m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
         super().__init__(mass_def=mass_def)
-        self.mass_func = mass_func
         
         self.fourier_numerical = fourier_numerical
         if fourier_numerical is True:
