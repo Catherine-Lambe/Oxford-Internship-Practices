@@ -72,32 +72,6 @@ class Initialiser_SAM(ccl.halos.profiles.profile_base.HaloProfile):
         self.nk = nk
         self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
 
-        #### MASS FRACTIONS
-        
-    def _f_stell_noA(self, M):
-        return np.exp( (-1/2) * ( np.log10(M/self.m_0s) /self.sigma_s )**2 )
-    
-    def _f_stell_integrand(self, M):
-        # integrand = m * f_star(m) * n(m), where n(m,z) is the standard DM-only halo mass function
-        #  DM_mass_func = hmf_200m(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
-        DM_mass_func = self.mass_func(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
-        return M * self._f_stell_noA(M) * DM_mass_func 
-     
-    def _f_stell(self, M):
-        # f_star(m) = A*np.exp( (-1/2) * ( np.log10(m/m_0s) /omega_s )**2 )
-        integrad = integrate.quad(self._f_stell_integrand, self.limInt_mStell[0], self.limInt_mStell[1])  # integrating over m (dm)
-        A = self.rho_avg_star / integrad[0] 
-        return A * self._f_stell_noA(M)
-
-    def _f_gas(self, M):
-        M_use = np.atleast_1d(M)
-        f_array = np.zeros(np.shape(M_use))
-        for i, mass in enumerate(M_use):
-            if (mass < self.m_0g):
-                f_array[i] = 0
-            else:
-                f_array[i] = (self.cosmo['Omega_b']/self.cosmo['Omega_m']) * erf(np.log10(mass/self.m_0g) / self.sigma_g)
-        return f_array
 
         ### UPDATE_PARAMETERS
     def update_parameters(self, cosmo=None, mass_def=None, mass_func=None, concentration=None, truncated=None, fourier_analytic=None, alpha=None, r_t=None, xDelta_stel=None, sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None, limInt=None, nk=None, krange=None, truncate_param=None):
@@ -187,11 +161,40 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile): #ccl.halos.profil
     
     """
 
+    def __init__(self, mass_def, concentration, fourier_analytic=True):
+        super().__init__(mass_def=mass_def, concentration=concentration)
+        self.fourier_analytic = fourier_analytic
+        if fourier_analytic is True:
+            self._fourier = self._fourier_analytic
+            
+        self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic)         # have truncated nfw profile initialised for cdm 
+        # (so can leave out putting in truncated=True par, as should always be true)
+
+    
+    def update_parameters(self, mass_def=None, concentration=None, fourier_analytic=None):
+        re_nfw = False # Check if we need to re-compute the [truncated] nfw profile for the cdm
+        if mass_def is not None and mass_def != self.mass_def:
+            self.mass_def = mass_def
+            re_nfw = True
+        if concentration is not None and concentration != self.concentration:
+            self.concentration = concentration
+            re_nfw = True
+        if fourier_analytic is not None and fourier_analytic is True: 
+            self._fourier = self._fourier_analytic    
+            re_nfw = True
+
+        if re_nfw is True:
+            self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=self.mass_def, concentration=self.concentration, fourier_analytic=self.fourier_analytic) 
+
+    def _f_cdm(self, cosmo):
+        f_c = 1 - cosmo['Omega_b']/cosmo['Omega_m']   # f_bar_b = 1 - f_c = cosmo['Omega_b']/cosmo['Omega_m']
+        return f_c
+
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         if no_fraction is True:
             f = 1
         else:
-            f = self.f_c
+            f = self._f_cdm(cosmo)
         prof = f * self.cdmProfile._real(self.cosmo, r, M, scale_a) 
         return prof
 
@@ -199,7 +202,7 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile): #ccl.halos.profil
         if no_fraction is True:
             f = 1
         else:
-            f = self.f_c
+            f = self._f_cdm(cosmo)
         prof = f * self.cdmProfile._fourier(self.cosmo, k, M, scale_a) 
         return prof
 
@@ -208,7 +211,21 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
+    def _f_stell_noA(self, M):
+        return np.exp( (-1/2) * ( np.log10(M/self.m_0s) /self.sigma_s )**2 )
     
+    def _f_stell_integrand(self, M):
+        # integrand = m * f_star(m) * n(m), where n(m,z) is the standard DM-only halo mass function
+        #  DM_mass_func = hmf_200m(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
+        DM_mass_func = self.mass_func(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
+        return M * self._f_stell_noA(M) * DM_mass_func 
+     
+    def _f_stell(self, M):
+        # f_star(m) = A*np.exp( (-1/2) * ( np.log10(m/m_0s) /omega_s )**2 )
+        integrad = integrate.quad(self._f_stell_integrand, self.limInt_mStell[0], self.limInt_mStell[1])  # integrating over m (dm)
+        A = self.rho_avg_star / integrad[0] 
+        return A * self._f_stell_noA(M)
+        
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         """ X
         """
@@ -247,7 +264,17 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
 class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Gas halo density profile. Fedeli (2014) arXiv:1401.2997
     """
-   
+
+    def _f_gas(self, M):
+        M_use = np.atleast_1d(M)
+        f_array = np.zeros(np.shape(M_use))
+        for i, mass in enumerate(M_use):
+            if (mass < self.m_0g):
+                f_array[i] = 0
+            else:
+                f_array[i] = (self.cosmo['Omega_b']/self.cosmo['Omega_m']) * erf(np.log10(mass/self.m_0g) / self.sigma_g)
+        return f_array
+        
     def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
               no_prefix=False, no_fraction=False): 
         """ X
