@@ -135,11 +135,11 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
 
         if m_0s is not None and m_0s != self.m_0s:
             self.m_0s = m_0s
-        if m_0s_prefix is not None and and m_0s_prefix != self.m_0s_prefix:
+        if m_0s_prefix is not None and m_0s_prefix != self.m_0s_prefix:
             self.m_0s_prefix = m_0s_prefix
         if rho_avg_star is not None and rho_avg_star != self.rho_avg_star:
             self.rho_avg_star = rho_avg_star
-        if rho_avg_star_prefix is not None and and rho_avg_star_prefix != self.rho_avg_star_prefix:
+        if rho_avg_star_prefix is not None and rho_avg_star_prefix != self.rho_avg_star_prefix:
             self.rho_avg_star_prefix = rho_avg_star_prefix
             
         #######
@@ -229,7 +229,7 @@ class GasProfile(ccl.halos.profiles.profile_base.HaloProfile):
             
         if m_0g is not None and m_0g != self.m_0g:
             self.m_0g = m_0g
-        if m_0g_prefix is not None and and m_0g_prefix != self.m_0g_prefix:
+        if m_0g_prefix is not None and m_0g_prefix != self.m_0g_prefix:
             self.m_0g_prefix = m_0g_prefix
         
         if beta is not None and beta != self.beta:
