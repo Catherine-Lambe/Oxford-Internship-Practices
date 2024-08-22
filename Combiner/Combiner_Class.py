@@ -8,14 +8,14 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
     def __init__(self, prof_list):
         # prof_list = [p1, p2, p3, ...] // = [stel_prof, cdm_prof, gas_prof, ej_prof]
         self.prof_list = prof_list
-        self.param_list = np.zeros[np.shape(self.prof_list)].to_list()
-   #     self.param_list = []
+   #     self.param_list = np.zeros[np.shape(self.prof_list)].to_list()
+        self.param_list = []
         for i, prof in enumerate(self.prof_list):
             arglist = list(prof.update_parameters.__code__.co_varnames)
             if 'self' in arglist:
                 arglist.remove('self')
-            self.param_list[i] = arglist
-          #  self.param_list.append(arglist)
+        #    self.param_list[i] = arglist
+            self.param_list.append(arglist)
 
     def update_parameters(self, **kwargs):
         for prof, param_names in zip(self.prof_list, self.param_list):
