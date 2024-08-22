@@ -240,7 +240,6 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
       #  self.nk = nk
        # self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
 
-
     def _f_stell_noA(self, cosmo, M):
         if self.m_0s is None:
             m_0s = self.m_0s_prefix/cosmo['h']
@@ -264,7 +263,38 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
         A = rho_avg_star / integrad[0] 
         return A * self._f_stell_noA(cosmo, M)
 
-    def update_parameters(self, )
+    def update_parameters(self, mass_def=None, mass_func=None, concentration=None, alpha=None, r_t=None, xDelta_stel=None, sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, ):
+        """Update any of the parameters associated with this profile.
+        Any parameter set to ``None`` won't be updated.
+        """
+        if mass_def is not None and mass_def != self.mass_def:
+            self.mass_def = mass_def
+        if mass_func is not None and mass_func != self.mass_func:
+            self.mass_func = mass_func
+        if concentration is not None and concentration != self.concentration:
+            self.concentration = concentration
+
+        if alpha is not None and alpha != self.alpha:
+            self.alpha = alpha
+        if r_t is not None and r_t != self.r_t:
+            self.r_t = r_t
+        if xDelta_stel is not None and xDelta_stel != self.xDelta_stel:
+            self.xDelta_stel = xDelta_stel
+        if sigma_s is not None and sigma_s != self.sigma_s:
+            self.sigma_s = sigma_s
+        if limInt_mStell is not None and limInt_mStell != self.limInt_mStell:
+            self.limInt_mStell = limInt_mStell
+
+        if m_0s is not None and m_0s != self.m_0s:
+            self.m_0s = m_0s
+        if m_0s_prefix is not None and and m_0s_prefix != self.m_0s_prefix:
+            self.m_0s_prefix = m_0s_prefix
+        if rho_avg_star is not None and rho_avg_star != self.rho_avg_star:
+            self.rho_avg_star = rho_avg_star
+        if rho_avg_star_prefix is not None and and rho_avg_star_prefix != self.rho_avg_star_prefix:
+            self.rho_avg_star_prefix = rho_avg_star_prefix
+            
+        #######
         
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         """ X
