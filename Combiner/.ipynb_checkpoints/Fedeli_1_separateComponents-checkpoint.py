@@ -211,13 +211,11 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
-    def __init__(self, cosmo, mass_def, mass_func, concentration,
-                alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), 
-                 m_0s=None, rho_avg_star=None, m_0g=None):
+    def __init__(self, mass_def, mass_func, concentration,
+                alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None):
               #  truncated=True, fourier_analytic=True, fourier_numerical=True, truncate_param=1):
         super().__init__(mass_def=mass_def, concentration=concentration)
         self.mass_func = mass_func
-        self.cosmo = cosmo
 
   #     self.fourier_analytic = fourier_analytic
    #     if fourier_analytic is True:
@@ -243,31 +241,30 @@ class StellarProfile(ccl.halos.profiles.profile_base.HaloProfile):
        # self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
 
 
-    def _f_stell_noA(self, M):
-        return np.exp( (-1/2) * ( np.log10(M/self.m_0s) /self.sigma_s )**2 )
+    def _f_stell_noA(self, cosmo, M):
+        if self.m_0s is None:
+            m_0s = self.m_0s_prefix/cosmo['h']
+        else:
+            m_0s = self.m_0s
+        return np.exp( (-1/2) * ( np.log10(M/m_0s) /self.sigma_s )**2 )
     
-    def _f_stell_integrand(self, M):
+    def _f_stell_integrand(self, cosmo, M):
         # integrand = m * f_star(m) * n(m), where n(m,z) is the standard DM-only halo mass function
         #  DM_mass_func = hmf_200m(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
-        DM_mass_func = self.mass_func(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
-        return M * self._f_stell_noA(M) * DM_mass_func 
+        DM_mass_func = self.mass_func(cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
+        return M * self._f_stell_noA(cosmo, M) * DM_mass_func 
      
-    def _f_stell(self, M):
+    def _f_stell(self, cosmo, M):
+        if rho_avg_star is None:
+            rho_avg_star = self.rho_avg_star_prefix**cosmo['h']**2 
+        else:
+            rho_avg_star = self.rho_avg_star
         # f_star(m) = A*np.exp( (-1/2) * ( np.log10(m/m_0s) /omega_s )**2 )
-
-         if m_0s is not None:
-            self.m_0s = m_0s
-        else:
-            self.m_0s = m_0s_prefix/self.cosmo['h'] # come back to
-        if rho_avg_star is not None:
-            self.rho_avg_star = rho_avg_star
-        else:
-            self.rho_avg_star = rho_avg_star_prefix**self.cosmo['h']**2 
-
-        
         integrad = integrate.quad(self._f_stell_integrand, self.limInt_mStell[0], self.limInt_mStell[1])  # integrating over m (dm)
-        A = self.rho_avg_star / integrad[0] 
-        return A * self._f_stell_noA(M)
+        A = rho_avg_star / integrad[0] 
+        return A * self._f_stell_noA(cosmo, M)
+
+    def update_parameters(self, )
         
     def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
         """ X
