@@ -315,7 +315,7 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
         self.A_star = A_star
         self.sigma_star = sigma_star
 
-    def update_parameters(self, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
+    def update_parameters(self, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
         if mass_def is not None and mass_def != self.mass_def:
             self.mass_def = mass_def  
         if concentration is not None and concentration != self.concentration:
