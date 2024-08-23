@@ -63,20 +63,23 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
-    def __init__(self, mass_def, mass_func, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None):
-              #  fourier_analytic=True, fourier_numerical=True, truncate_param=1):
+    def __init__(self, mass_def, mass_func, alpha=1, fourier_analytic=True, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None):
+              # fourier_numerical=True, truncate_param=1):
         super().__init__(mass_def=mass_def)
         self.mass_func = mass_func
-
-  #     self.fourier_analytic = fourier_analytic
-   #     if fourier_analytic is True:
-    #        self._fourier = self._fourier_analytic
         
         self.alpha = alpha
         self.r_t = r_t
         self.xDelta_stel = xDelta_stel
         self.sigma_s = sigma_s
         self.limInt_mStell = limInt_mStell
+
+        self.fourier_analytic = fourier_analytic
+        if fourier_analytic is True and self.alpha==1:
+            self._fourier = self._fourier_analytic
+        else:
+            print('Analytic Fourier not an option. CCL\'S .fourier now assigned to ._fourier')
+            self._fourier = self.fourier
 
         self.m_0s = m_0s
         self.m_0s_prefix = m_0s_prefix
@@ -178,6 +181,62 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         if np.ndim(M) == 0:
             prof = np.squeeze(prof, axis=0)
         return prof
+
+    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False, version='Wolfram'): 
+        """ X
+        """
+       #  if self.alpha==1:
+         k_use = np.atleast_1d(k)
+         M_use = np.atleast_1d(M)
+
+         r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
+         if no_fraction is True:
+             f = 1
+         else:
+             f = self._f_stell(cosmo, M_use)
+
+         if self.xDelta_stel is None:
+             r_t = self.r_t
+             x_delta = r_vir / self.r_t # use the inputted value of r_t
+         else:
+        # default: x_delta = 1/0.03, as in Fedeli 2014 paper 
+             x_delta = self.xDelta_stel  # reassign r_c in order to give the specific r_c/r_Del ratio desired 
+             r_t = r_vir / x_delta
+         
+         nu_alpha = 1 - (2 / self.alpha)
+        # Using E_1 = int^infty_1 e^{-xt} * t dt = (e^{-x}*(x+1))/(x^2), assuming x = alpha here
+         rho_t_bracket = gamma(1 - nu_alpha) - (x_delta**2)*(x_delta**self.alpha)*(np.exp(-nu_alpha)*(nu_alpha+1))/(nu_alpha**2)
+         rho_t = M_use*f*self.alpha / (4*np.pi*(r_t**3) * rho_t_bracket)
+
+  #       x = r_use[None, :] / r_t[:, None]
+       # prefix = rho_t
+   #     prof = rho_t[:, None] * np.exp(-x**self.alpha)/x # prefix[:, None] * np.exp(-x**self.alpha)/x 
+         q = k_use[None,:] * r_vir[:,None]
+        
+         prefix = 4*np.pi*rho_t 
+     #    prefix =  4 * np.pi * (r_vir**3) * rho_t
+                # np.e == np.exp(1), np.e = e
+         prof_eqn = (r_t[:,None]**3)/(1+q**2)
+     #    prof_eqn =  (np.e - np.cos(q) - (np.sin(q)/q)) / (np.e*(1 + q**2))
+         prof = prefix[:,None] * prof_eqn[None,:]
+            
+    
+    
+        # else:
+       #      print('Alpha is not 1. Analytic not available. Using CCL\'s FFT') # implement numerical interpolation ?
+            # update the fft params to increase precision/accuracy
+      #       self.update_precision_fftlog(padding_hi_fftlog=1E3,padding_lo_fftlog=1E-3,
+     #                      n_per_decade=1000,plaw_fourier=-2.)
+    #         prof = self.fourier(cosmo, trial_k, trial_M, scale_a)
+   #          print('Call .fourier instead')
+    
+                
+         if np.ndim(k) == 0:
+             prof = np.squeeze(prof, axis=-1)
+         if np.ndim(M) == 0:
+             prof = np.squeeze(prof, axis=0)
+            
+         return prof[0]
 
 class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Gas halo density profile. Fedeli (2014) arXiv:1401.2997
