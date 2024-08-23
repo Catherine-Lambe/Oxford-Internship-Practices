@@ -8,69 +8,14 @@ import scipy.interpolate as interpol
 from scipy.special import erf, gamma, hyp2f1
 from pyccl._core import UnlockInstance
 
-class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile): #ccl.halos.profiles.nfw.HaloProfileNFW): 
-    """Density profile for the cold dark matter (cdm), using the Navarro-Frenk-White, multiplied by the cdm's mass fraction (unless no_fraction is set to True in the real & analytical Fourier methods below).
-    
-    """
-
-    def __init__(self, mass_def, concentration, fourier_analytic=True):
-        super().__init__(mass_def=mass_def, concentration=concentration)
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
-            
-        self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic)         # have truncated nfw profile initialised for cdm 
-        # (so can leave out putting in truncated=True par, as should always be true)
-
-    
-    def update_parameters(self, mass_def=None, concentration=None, fourier_analytic=None):
-        re_nfw = False # Check if we need to re-compute the [truncated] nfw profile for the cdm
-        if mass_def is not None and mass_def != self.mass_def:
-            self.mass_def = mass_def
-            re_nfw = True
-        if concentration is not None and concentration != self.concentration:
-            self.concentration = concentration
-            re_nfw = True
-        if fourier_analytic is not None and fourier_analytic is True: 
-            self._fourier = self._fourier_analytic    
-            re_nfw = True
-
-        if re_nfw is True:
-            self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=self.mass_def, concentration=self.concentration, fourier_analytic=self.fourier_analytic) 
-
-    def _f_cdm(self, cosmo):
-        f_c = 1 - cosmo['Omega_b']/cosmo['Omega_m']   # f_bar_b = 1 - f_c = cosmo['Omega_b']/cosmo['Omega_m']
-        return f_c
-
-    def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._real(cosmo, r, M, scale_a) 
-        return prof
-
-    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._fourier(cosmo, k, M, scale_a) 
-        return prof
-
 
 class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Stellar halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
-    def __init__(self, mass_def, mass_func, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None):
-              #  fourier_analytic=True, fourier_numerical=True, truncate_param=1):
+    def __init__(self, mass_def, mass_func, alpha=1, r_t=1, xDelta_stel = 1/0.03, m_0s_prefix=5E12, sigma_s=1.2, rho_avg_star_prefix=7E8, limInt_mStell=(1E10, 1E15), m_0s=None, rho_avg_star=None, no_fraction=False):
         super().__init__(mass_def=mass_def)
         self.mass_func = mass_func
-
-  #     self.fourier_analytic = fourier_analytic
-   #     if fourier_analytic is True:
-    #        self._fourier = self._fourier_analytic
         
         self.alpha = alpha
         self.r_t = r_t
@@ -82,6 +27,7 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         self.m_0s_prefix = m_0s_prefix
         self.rho_avg_star = rho_avg_star
         self.rho_avg_star_prefix = rho_avg_star_prefix
+        self.no_fraction = no_fraction
         
     #    self.truncate_param = truncate_param # if truncate=True in real, truncate at r > (r_vir * truncate_param)
 
@@ -103,7 +49,10 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         DM_mass_func = self.mass_func(cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
         return M * self._f_stell_noA(cosmo, M) * DM_mass_func 
      
-    def _f_stell(self, cosmo, M):
+    def _fraction(self, cosmo, M):
+        if self.no_fraction:
+            return 1
+
         if self.rho_avg_star is None:
             rho_avg_star = self.rho_avg_star_prefix**cosmo['h']**2 
         else:
@@ -113,12 +62,10 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         A = rho_avg_star / integrad[0] 
         return A * self._f_stell_noA(cosmo, M)
 
-    def update_parameters(self, mass_def=None, mass_func=None, alpha=None, r_t=None, xDelta_stel=None, sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, ):
+    def update_parameters(self, mass_func=None, alpha=None, r_t=None, xDelta_stel=None, sigma_s=None, limInt_mStell=None, m_0s_prefix=None, rho_avg_star_prefix=None, m_0s=None, rho_avg_star=None, ):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
-        if mass_def is not None and mass_def != self.mass_def:
-            self.mass_def = mass_def
         if mass_func is not None and mass_func != self.mass_func:
             self.mass_func = mass_func
 
@@ -144,17 +91,14 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
             
         #######
         
-    def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
+    def _real(self, cosmo, r, M, a):
         """ X
         """
         r_use = np.atleast_1d(r)
         M_use = np.atleast_1d(M)
 
-        r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_stell(cosmo, M_use)
+        r_vir = self.mass_def.get_radius(cosmo, M_use, a) / a    # R_delta = the halo virial radius r_vir
+        f = self._fraction(cosmo, M_use)
         
         if self.xDelta_stel is None:
             r_t = self.r_t
@@ -183,7 +127,11 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     """ Gas halo density profile. Fedeli (2014) arXiv:1401.2997
     """
 
-    def __init__(self, mass_def, fourier_numerical=True, beta=2/3, r_c = 1, xDelta_gas = 1/0.05, limInt=(0,1), nk=64, krange=(5E-3, 5E2), m_0g=None, m_0g_prefix = 5E12, sigma_g = 1.2, truncate_param=1):
+    def __init__(self, mass_def, fourier_numerical=True,
+                 beta=2/3, r_c = 1, xDelta_gas = 1/0.05,
+                 limInt=(0,1), nk=64, krange=(5E-3, 5E2),
+                 m_0g=None, m_0g_prefix = 5E12, sigma_g = 1.2,
+                 truncate_param=1, no_fraction=False):
         super().__init__(mass_def=mass_def)
         
         self.fourier_numerical = fourier_numerical
@@ -203,8 +151,11 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         self.krange = krange
         self.nk = nk
         self._func_fourier = None   # [Normalised] profile from the Fourier interpolator (for Fedeli's Fourier integral)
+        self.no_fraction = no_fraction
 
-    def _f_gas(self, cosmo, M):
+    def _fraction(self, cosmo, M):
+        if self.no_fraction:
+            return 1
         M_use = np.atleast_1d(M)
         f_array = np.zeros(np.shape(M_use))
         if self.m_0g is None:
@@ -219,13 +170,10 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
                 f_array[i] = (cosmo['Omega_b']/cosmo['Omega_m']) * erf(np.log10(mass/m_0g) / self.sigma_g)
         return f_array
 
-    def update_parameters(self, mass_def=None, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, fourier_numerical=None, limInt=None, nk=None, krange=None, truncate_param=None):
+    def update_parameters(self, m_0g_prefix=None, m_0g=None, beta=None, r_c=None, xDelta_gas=None, sigma_g=None, limInt=None, nk=None, krange=None, truncate_param=None, no_fraction=None):
         """Update any of the parameters associated with this profile.
         Any parameter set to ``None`` won't be updated.
         """
-        if mass_def is not None and mass_def != self.mass_def:
-            self.mass_def = mass_def
-            
         if m_0g is not None and m_0g != self.m_0g:
             self.m_0g = m_0g
         if m_0g_prefix is not None and m_0g_prefix != self.m_0g_prefix:
@@ -239,9 +187,6 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
             self.xDelta_gas = xDelta_gas
         if sigma_g is not None and sigma_g != self.sigma_g:
             self.sigma_g = sigma_g
-
-        if fourier_numerical is not None and fourier_numerical is True: 
-            self._fourier = self._fourier_numerical   
 
         # Check if we need to recompute the (optional) interpolator for the gas
         re_func_fourier = False   
@@ -257,6 +202,9 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         if truncate_param is not None and truncate_param != self.truncate_param:
             re_func_fourier = True
             self.truncate_param = truncate_param
+
+        if no_fraction is not None:
+            self.no_fraction = no_fraction
             
 # need to recall the interpolator function for the gas Fourier profile 
 ## BUT this relies on calling the real profile (with the given masses, & so on)
@@ -264,19 +212,18 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         if re_func_fourier is True and (self._func_fourier is not None):  
             self._func_fourier = None
         
-    def _real(self, cosmo, r, M, scale_a=1, truncate=True, # for inbuilt FFT, need truncation to be default
-              no_prefix=False, no_fraction=False): 
+    def _real(self, cosmo, r, M, a):#=1, truncate=True, # for inbuilt FFT, need truncation to be default
+              #no_prefix=False, no_fraction=False): 
         """ X
         """
+        # TODO: think about truncation
+        truncate = True
         
         r_use = np.atleast_1d(r)
         M_use = np.atleast_1d(M)
 
-        r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_gas(cosmo, M_use)
+        r_vir = self.mass_def.get_radius(cosmo, M_use, a) / a    # R_delta = the halo virial radius r_vir
+        f = self._fraction(cosmo, M_use)
 
         if self.xDelta_gas is None:
             x_delta = r_vir / self.r_c # use the inputted value of r_c
@@ -291,11 +238,7 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
         
         x = r_use[None, :] / r_c[:, None]
 
-        if no_prefix is True:
-            prof = 1/( (1 + x**2)**(3*self.beta/2) )
-        else:
-          #  prefix = rho_c 
-            prof = rho_c[:, None] / ((1 + x**2 )**(3 * self.beta / 2) ) # prefix[:, None] / ((1 + x**2 )**(3 * self.beta / 2) )
+        prof = rho_c[:, None] / ((1 + x**2 )**(3 * self.beta / 2) ) # prefix[:, None] / ((1 + x**2 )**(3 * self.beta / 2) )
 
         if truncate is True:
             RVIR, R = np.meshgrid(self.truncate_param*r_vir, r_use)
@@ -307,42 +250,46 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
             prof = np.squeeze(prof, axis=0)
         return prof
 
-    def _fourier_integral(self, x, M, r_vir, cosmo, scale_a=1, no_prefix=False, no_fraction=False):
+    def _fourier_integral(self, x, M, r_vir, cosmo, a):
         """ Function to integrate for the Fedeli Fourier transform: 
         prof_fourier(k) = prof_real * x, integrated over x from 0 to 1, weighted by sin(k * R_delta * x) 
         & multiplied by prefix of 4*pi*R_delta^2 / k"""
-        prof_real = self._real(cosmo=cosmo, r=x*r_vir, M=M, scale_a=scale_a, no_prefix=no_prefix, no_fraction=no_fraction)
+        prof_real = self._real(cosmo=cosmo, r=x*r_vir, M=M, a=a)
         integral = prof_real * x
         return integral
 
-    def _interpol_fourier(self, M_array, cosmo, scale_a=1, no_prefix=False, no_fraction=False):  
+    def _interpol_fourier(self, M_array, cosmo, a):
         # interpolator for Fedeli's Fourier interpolator, over k
         k_list = np.geomspace(self.krange[0], self.krange[1], self.nk) 
         I0_array = np.zeros((len(M_array), self.nk))
         M_array = np.atleast_1d(M_array)
         
         for i, mass in enumerate(M_array):
-            r_vir = self.mass_def.get_radius(cosmo, mass, scale_a) / scale_a  
+            r_vir = self.mass_def.get_radius(cosmo, mass, a) / a  
             for j, k_value in enumerate(k_list):
                 int_bob = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], 
-                                    args=(mass, r_vir, cosmo, scale_a, no_prefix, no_fraction), weight="sin", wvar=r_vir*k_value)[0] 
+                                    args=(mass, r_vir, cosmo, a), weight="sin", wvar=r_vir*k_value)[0] 
                 I0_array[i, j] = int_bob * 4 * np.pi * (r_vir **2) / k_value
             func_fourier = interpol.interp1d(k_list, I0_array) 
         return func_fourier
     
-    def _fourier_numerical(self, cosmo, k, M, scale_a=1, interpol_true=True, k2=np.geomspace(1E-2,9E1, 100), no_prefix=False, no_fraction=False): 
+    def _fourier_numerical(self, cosmo, k, M, a): 
         """ X
         """
+        # TODO: think about these
+        interpol_true = True
+        k2 = np.geomspace(1E-2, 9E1, 100)
+
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
-        r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # R_delta = the halo virial radius r_vir
-        f_gas = self._f_gas(cosmo, M_use)
+        r_vir = self.mass_def.get_radius(cosmo, M_use, a) / a    # R_delta = the halo virial radius r_vir
+        f_gas = self._fraction(cosmo, M_use)
 
         if interpol_true is True:
             if self._func_fourier is None:
                 with UnlockInstance(self):
-                    self._func_fourier = self._interpol_fourier(M_use, cosmo, scale_a, no_prefix, no_fraction) 
+                    self._func_fourier = self._interpol_fourier(M_use, cosmo, a) 
         # giving it the Masses above when setting up the profile
             prof = self._func_fourier(k_use)
             
@@ -352,7 +299,7 @@ class GasProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
             for i, mass in enumerate(M_use):
                 for j, k_value in enumerate(k_use):
                     integrated = integrate.quad(self._fourier_integral, self.limInt[0], self.limInt[1], 
-                            args=(mass, r_vir[i], cosmo, scale_a, no_prefix, no_fraction), weight="sin", wvar=r_vir[i]*k_value)[0]
+                            args=(mass, r_vir[i], cosmo, scale_a), weight="sin", wvar=r_vir[i]*k_value)[0]
                     prof_array[i,j] = integrated * 4 * np.pi * (r_vir[i] **2) / k_value
             prof = prof_array
             

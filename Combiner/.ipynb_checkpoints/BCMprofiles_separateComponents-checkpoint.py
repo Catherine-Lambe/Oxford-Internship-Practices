@@ -52,49 +52,42 @@ class CDMProfile(ccl.halos.profiles.profile_base.HaloProfile):
     
     """
 
-    def __init__(self, mass_def, concentration, fourier_analytic=True):
+    def __init__(self, mass_def, concentration, no_fraction=False, fourier_analytic=True):
         super().__init__(mass_def=mass_def, concentration=concentration)
         self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
+        self.no_fraction = no_fraction
             
-        self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=mass_def, concentration=concentration, fourier_analytic=fourier_analytic)         # have truncated nfw profile initialised for cdm 
+        self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(
+            mass_def=mass_def,
+            concentration=concentration, fourier_analytic=fourier_analytic)         # have truncated nfw profile initialised for cdm 
         # (so can leave out putting in truncated=True par, as should always be true)
-
     
-    def update_parameters(self, mass_def=None, concentration=None, fourier_analytic=None):
+    def update_parameters(self, fourier_analytic=None, no_fraction=None):
         re_nfw = False # Check if we need to re-compute the [truncated] nfw profile for the cdm
-        if mass_def is not None and mass_def != self.mass_def:
-            self.mass_def = mass_def
-            re_nfw = True
-        if concentration is not None and concentration != self.concentration:
-            self.concentration = concentration
-            re_nfw = True
-        if fourier_analytic is not None and fourier_analytic is True: 
+        if no_fraction is not None:
+            self.no_fraction = no_fraction
+        if fourier_analytic is not None and fourier_analytic is True:
+            self.fourier_analytic = fourier_analytic
             self._fourier = self._fourier_analytic    
             re_nfw = True
 
         if re_nfw is True:
             self.cdmProfile = ccl.halos.profiles.nfw.HaloProfileNFW(mass_def=self.mass_def, concentration=self.concentration, fourier_analytic=self.fourier_analytic) 
 
-    def _f_cdm(self, cosmo):
+    def _fraction(self, cosmo):
+        if self.no_fraction:
+            return 1
         f_c = 1 - cosmo['Omega_b']/cosmo['Omega_m']   # f_bar_b = 1 - f_c = cosmo['Omega_b']/cosmo['Omega_m']
         return f_c
 
-    def _real(self, cosmo, r, M, scale_a=1, no_fraction=False):
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._real(cosmo, r, M, scale_a) 
+    def _real(self, cosmo, r, M, a):
+        f = self._fraction(cosmo)
+        prof = f * self.cdmProfile._real(cosmo, r, M, a) 
         return prof
 
-    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_cdm(cosmo)
-        prof = f * self.cdmProfile._fourier(cosmo, k, M, scale_a) 
+    def _fourier(self, cosmo, k, M, a):
+        f = self._fraction(cosmo)
+        prof = f * self.cdmProfile._fourier(cosmo, k, M, a) 
         return prof
 
 class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile): 
@@ -112,45 +105,38 @@ class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
     To do later: Change real profile of stellar from delta function to (...)
     """ 
 
-    def __init__(self, mass_def, fourier_analytic=True, M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2):
+    def __init__(self, mass_def, M_star = 10**(12.5), A_star = 0.03, sigma_star = 1.2, no_fraction=False):
         super().__init__(mass_def=mass_def)
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
         self.M_star = M_star
         self.A_star = A_star
         self.sigma_star = sigma_star
+        self.no_fraction = no_fraction
 
-    def update_parameters(self, mass_def=None, fourier_analytic=None, M_star=None, A_star=None, sigma_star=None):
-        if mass_def is not None and mass_def != self.mass_def:
-            self.mass_def = mass_def
-        if fourier_analytic is not None and fourier_analytic is True: 
-            self._fourier = self._fourier_analytic  
-
+    def update_parameters(self, M_star=None, A_star=None, sigma_star=None, no_fraction=None):
         if M_star is not None and M_star != self.M_star:
             self.M_star = M_star
         if A_star is not None and A_star != self.A_star:
             self.A_star = A_star
         if sigma_star is not None and sigma_star != self.sigma_star:
             self.sigma_star = sigma_star
+        if no_fraction is not None:
+            self.no_fraction = no_fraction
 
-    def _f_stell(self, M):
+    def _fraction(self, M):
+        if self.no_fraction:
+            return 1
         f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
         return f_stell
 
     # To do later: Change real profile of stellar from delta function to (...)
-    def _real(self, cosmo, r, M, scale_a=1, centre_pt=None, no_fraction=False): 
+    def _real(self, cosmo, r, M, a, centre_pt=None, no_fraction=False): 
         # want delta centred at r=0 (& since log scale, can't do negative or zero values in array)
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
-        len_r = len(r_use) 
 
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_stell(M_use) # f = f_stell
-        prefix = f * M_use / scale_a**3
-        prof = prefix[:, None] * signal.unit_impulse(len_r, centre_pt)[None,:] # If centre_pt=None, defaults to index at the 0th element.
+        if np.any(r_use == 0):
+            raise ValueError("Can't evaluate delta function at r=0")
+        prof = np.zeros([len(M_use), len(r_use)])
 
         if np.ndim(r) == 0:
             prof = np.squeeze(prof, axis=-1)
@@ -159,16 +145,13 @@ class StellarProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
                                                           
         return prof
 
-    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
+    def _fourier(self, cosmo, k, M, a):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_stell(M_use) # f = f_stell
-        prefix = f * M_use / scale_a**3
-        prof = np.ones_like(k_use)[None,:] * prefix[:, None] # k_use[None,:] + prefix[:, None] * 1 # as g(k) = 1
+        f = self._fraction(M_use) # f = f_stell
+        prefix = f * M_use / a**3
+        prof = np.ones_like(k_use)[None, :] * prefix[:, None] # k_use[None,:] + prefix[:, None] * 1 # as g(k) = 1
 
         if np.ndim(k) == 0:
             prof = np.squeeze(prof, axis=-1)
@@ -182,30 +165,23 @@ class EjectedGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
     where: 
     """
 
-    def __init__(self, mass_def, fourier_analytic=True, delta=200, eta_b=0.5, beta=0.6, M_c=10**(13.5), M_star=10**(12.5), A_star=0.03, sigma_star=1.2):
+    def __init__(self, mass_def, eta_b=0.5, beta=0.6,
+                 M_c=10**(13.5), M_star=10**(12.5),
+                 A_star=0.03, sigma_star=1.2,
+                 no_fraction=False):
         super().__init__(mass_def=mass_def)
-        self.fourier_analytic = fourier_analytic
-        if fourier_analytic is True:
-            self._fourier = self._fourier_analytic
-        self.delta = delta
-        self.eta_b = eta_b
-        
+        self.eta_b = eta_b        
         self.beta = beta
         self.M_c = M_c
         self.M_star = M_star
         self.A_star = A_star
         self.sigma_star = sigma_star
+        self.no_fraction = no_fraction
 
-    def update_parameters(self, mass_def=None, fourier_analytic=None, delta=None, eta_b=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
-        if mass_def is not None and mass_def != self.mass_def:
-            self.mass_def = mass_def
-        if fourier_analytic is not None and fourier_analytic is True: 
-            self._fourier = self._fourier_analytic  
-        if delta is not None and delta != self.delta:
-            self.delta = delta
+    def update_parameters(self, eta_b=None, beta=None, M_c=None, M_star=None, A_star=None,
+                          sigma_star=None, no_fraction=None):
         if eta_b is not None and eta_b != self.eta_b:
             self.eta_b = eta_b
-
         if beta is not None and beta != self.beta:
             self.beta = beta
         if M_c is not None and M_c != self.M_c:
@@ -216,26 +192,27 @@ class EjectedGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
             self.A_star = A_star
         if sigma_star is not None and sigma_star != self.sigma_star:
             self.sigma_star = sigma_star
-    
+        if no_fraction is not None:
+            self.no_fraction = no_fraction    
 
-    def _f_ej(self, cosmo, M):
+    def _fraction(self, cosmo, M):
         """ f_ej = self.f_bar_b - f_stell - f_bd. f_bar_b = cosmo['Omega_b']/cosmo['Omega_m'"""
+        if self.no_fraction:
+            return 1
         f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
         f_bd = (cosmo['Omega_b']/cosmo['Omega_m'] - f_stell) / (1 + (self.M_c / M)**self.beta )
         f_ej = cosmo['Omega_b']/cosmo['Omega_m'] - f_stell - f_bd
         return f_ej
 
-    def _real(self, cosmo, r, M, scale_a=1, no_fraction=False): 
+    def _real(self, cosmo, r, M, a): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
-        r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # halo virial radius
-        r_e = 0.375*r_vir*np.sqrt(self.delta)*self.eta_b                                    # eta_b = a free parameter
 
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_ej(cosmo, M_use)
-        prefix = f * M_use / (scale_a*r_e*np.sqrt(2*np.pi))**3  
+        r_vir = self.mass_def.get_radius(cosmo, M_use, a) / a    # halo virial radius
+        r_e = 0.375*r_vir*np.sqrt(self.mass_def.get_Delta(cosmo, a))*self.eta_b  # eta_b = a free parameter
+
+        f = self._fraction(cosmo, M_use)
+        prefix = f * M_use / (a*r_e*np.sqrt(2*np.pi))**3  
         x = r_use[None, :] / r_e[:, None]
         prof = prefix[:, None] * np.exp(-(x**2)/2)
 
@@ -246,17 +223,14 @@ class EjectedGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
                                                           
         return prof
 
-    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
+    def _fourier(self, cosmo, k, M, a):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
-        r_vir = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a    # halo virial radius
-        r_e = 0.375*r_vir*np.sqrt(self.delta)*self.eta_b                                    # eta_b = a free parameter
+        r_vir = self.mass_def.get_radius(cosmo, M_use, a) / a    # halo virial radius
+        r_e = 0.375*r_vir*np.sqrt(self.mass_def.get_Delta(cosmo, a))*self.eta_b  # eta_b = a free parameter
 
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_ej(cosmo, M_use)
-        prefix = f * M_use / scale_a**3
+        f = self._fraction(cosmo, M_use)
+        prefix = f * M_use / a**3
         x = k_use[None, :] * r_e[:, None]
         prof = prefix[:, None] * np.exp(-(x**2)/2)  
 
@@ -266,6 +240,7 @@ class EjectedGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
             prof = np.squeeze(prof, axis=0)
 
         return prof
+
 
 class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile): 
     """Creating a class for the bound gas density profile where: 
@@ -293,7 +268,10 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
     Inherits __init__ , update_parameters, _f_stell & _f_bd methods from Initialiser parent class.    
     """
 
-    def __init__(self, mass_def, concentration, Gamma=1.1, fourier_analytic=True, gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64, limInt=(1E-3, 5E3), beta=0.6, M_c=10**(13.5), M_star=10**(12.5), A_star=0.03, sigma_star=1.2):
+    def __init__(self, mass_def, concentration, Gamma=1.1, fourier_analytic=True,
+                 gammaRange = (3, 20), ngamma=64, qrange=(1e-4, 1e2), nq=64,
+                 limInt=(1E-3, 5E3), beta=0.6, M_c=10**(13.5),
+                 M_star=10**(12.5), A_star=0.03, sigma_star=1.2, no_fraction=False):
         super().__init__(mass_def=mass_def, concentration=concentration)
         self.Gamma = Gamma
         self.fourier_analytic = fourier_analytic
@@ -314,17 +292,13 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
         self.M_star = M_star
         self.A_star = A_star
         self.sigma_star = sigma_star
+        self.no_fraction = no_fraction
 
-    def update_parameters(self, mass_def=None, concentration=None, Gamma=None, fourier_analytic=None, gammaRange=None, ngamma=None, qrange=None, nq=None, limInt=None, beta=None, M_c=None, M_star=None, A_star=None, sigma_star=None):
-        if mass_def is not None and mass_def != self.mass_def:
-            self.mass_def = mass_def  
-        if concentration is not None and concentration != self.concentration:
-            self.concentration = concentration
+    def update_parameters(self, Gamma=None, gammaRange=None, ngamma=None,
+                          qrange=None, nq=None, limInt=None, beta=None,
+                          M_c=None, M_star=None, A_star=None, sigma_star=None, no_fraction=None):
         if Gamma is not None and Gamma != self.Gamma:
             self.Gamma = Gamma
-        if fourier_analytic is not None and fourier_analytic is True: 
-            self._fourier = self._fourier_analytic
-
         if beta is not None and beta != self.beta:
             self.beta = beta
         if M_c is not None and M_c != self.M_c:
@@ -362,9 +336,13 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
             self._func_normQ0 = self._norm_interpol1() 
         if re_normQany is True and (self._func_normQany is not None):
             self._func_normQany = self._norm_interpol2()
+        if no_fraction is not None:
+            self.no_fraction = no_fraction    
 
-    def _f_bd(self, cosmo, M): 
+    def _fraction(self, cosmo, M): 
         """f_bd requires f_stell, hence the self.X_star parameters, f_bar_b = cosmo['Omega_b']/cosmo['Omega_m'"""
+        if self.no_fraction:
+            return 1
         f_stell = self.A_star * np.exp( (-1/2)* (np.log10(M / self.M_star) / self.sigma_star)**2 )
         f_bd = (cosmo['Omega_b']/cosmo['Omega_m'] - f_stell) / (1 + (self.M_c / M)**self.beta )
         return f_bd
@@ -376,11 +354,6 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
     def _innerInt(self, x, gam): 
         return x**2 * self._shape(x, gam)   
 
-    def _Vb_prefix(self, gam, r_s=1):
-        vB1 = integrate.quad(self._innerInt, self.limInt[0], self.limInt[1], args = gam)  
-        vB2 = 4*np.pi*(r_s**3)*vB1[0]
-        return vB2
-
     def _norm_interpol1(self):  # interpol1 = for q = 0
         gamma_list = np.linspace(self.gammaRange[0], self.gammaRange[1], self.ngamma) 
         I0_array = np.zeros(self.ngamma)
@@ -389,28 +362,21 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
         func_normQ0 = interpol.interp1d(gamma_list, I0_array) 
         return func_normQ0
         
-    def _real(self, cosmo, r, M, scale_a=1, call_interp=True, no_fraction=False): 
+    def _real(self, cosmo, r, M, a): 
         r_use = np.atleast_1d(r) 
         M_use = np.atleast_1d(M)
         
-        R_M = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a       # halo virial radius
-        c_M = self.concentration(cosmo, M_use, scale_a)                       # concentration-mass relation c(M)
-        r_s = R_M / c_M                                                            # characteristic scale r_s
+        R_M = self.mass_def.get_radius(cosmo, M_use, a) / a  # halo virial radius
+        c_M = self.concentration(cosmo, M_use, a)            # concentration-mass relation c(M)
+        r_s = R_M / c_M                                      # characteristic scale r_s
 
-        if call_interp is False:
-            print(call_interp)
-            vB_prefix = self._Vb_prefix(1/(self.Gamma-1), r_s)
-        else:
-            if self._func_normQ0 is None: # is instead of == here
-                with UnlockInstance(self):
-                    self._func_normQ0 = self._norm_interpol1() 
-            vB_prefix = 4*np.pi*(r_s**3)*self._func_normQ0(1/(self.Gamma-1))
+        if self._func_normQ0 is None: # is instead of == here
+            with UnlockInstance(self):
+                self._func_normQ0 = self._norm_interpol1() 
+        vB_prefix = 4*np.pi*(r_s**3)*self._func_normQ0(1/(self.Gamma-1))
 
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_bd(cosmo, M_use)
-        prefix = f * M_use * (1/scale_a**3) * (1/vB_prefix)
+        f = self._fraction(cosmo, M_use)
+        prefix = f * M_use /(a**3 * vB_prefix)
 
         x = r_use[None, :] / r_s[:, None]
         prof = prefix[:, None] * self._shape(x, 1/(self.Gamma-1)) 
@@ -434,15 +400,15 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
             for j, q in enumerate(q_array): 
                 I0_array[i, j] =  integrate.quad(integralQany, self.limInt[0], self.limInt[1], args = g, weight = "sin", wvar=q)[0] / q
             print(f'Qany = {100*(i+1)/self.ngamma:.3g}% through')
-        func_normQany = interpol.RegularGridInterpolator((gamma_list, np.log(q_array)), I0_array)
+        func_normQany = interpol.RegularGridInterpolator((gamma_list, np.log(q_array)), I0_array, bounds_error=False, fill_value=None)
         return func_normQany
     
-    def _fourier_analytic(self, cosmo, k, M, scale_a=1, no_fraction=False):
+    def _fourier_analytic(self, cosmo, k, M, a):
         k_use = np.atleast_1d(k)
         M_use = np.atleast_1d(M)
 
-        R_M = self.mass_def.get_radius(cosmo, M_use, scale_a) / scale_a       # halo virial radius
-        c_M = self.concentration(cosmo, M_use, scale_a)                       # concentration-mass relation c(M)
+        R_M = self.mass_def.get_radius(cosmo, M_use, a) / a       # halo virial radius
+        c_M = self.concentration(cosmo, M_use, a)                       # concentration-mass relation c(M)
         r_s = R_M / c_M                                                            # characteristic scale r_s
 
         if self._func_normQ0 is None:
@@ -457,11 +423,8 @@ class BoundGasProfileBCM(ccl.halos.profiles.profile_base.HaloProfile):
         gAny = self._func_normQany((1/(self.Gamma-1), np.log(q_use)))
         g_k = gAny/g0 
 
-        if no_fraction is True:
-            f = 1
-        else:
-            f = self._f_bd(cosmo, M_use)
-        prefix = f * M_use / scale_a**3
+        f = self._fraction(cosmo, M_use)
+        prefix = f * M_use / a**3
         prof = prefix[:, None] * g_k[None,:] 
 
         if np.ndim(k) == 0:

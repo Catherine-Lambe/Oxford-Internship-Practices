@@ -6,6 +6,7 @@ import pyccl as ccl
 class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
 
     def __init__(self, prof_list):
+        # TODO: Check all profiles have the same mass definition
         # prof_list = [p1, p2, p3, ...] // = [stel_prof, cdm_prof, gas_prof, ej_prof]
         self.prof_list = prof_list
    #     self.param_list = np.zeros[np.shape(self.prof_list)].to_list()
@@ -16,6 +17,8 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
                 arglist.remove('self')
         #    self.param_list[i] = arglist
             self.param_list.append(arglist)
+        super().__init__(mass_def=prof_list[0].mass_def)
+
 
     def update_parameters(self, **kwargs):
         for prof, param_names in zip(self.prof_list, self.param_list):
@@ -35,7 +38,7 @@ class CombinerClass(ccl.halos.profiles.profile_base.HaloProfile):
     def _fourier(self, cosmo, k, M, a): # scale_a = 1
         # use ._fourier OR .fourier (not all have options other than inbuilt)
         # could add in to the component profiles that, if fourier_analytic (etc) is called, but there is none, Then: self._fourier = self.fourier (so call CCL)
-        fourier_list = [prof._fourier(cosmo, k, M, a) for prof in self.prof_list]
+        fourier_list = [prof.fourier(cosmo, k, M, a) for prof in self.prof_list]
         # apply np.array or np.atleast_1d for this
         profile = np.sum(np.atleast_1d(fourier_list), axis=0)
         return profile
