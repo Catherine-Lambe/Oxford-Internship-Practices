@@ -103,7 +103,7 @@ class StellarProfileSAM(ccl.halos.profiles.profile_base.HaloProfile):
     def _f_stell_integrand(self, M, cosmo):
         # integrand = m * f_star(m) * n(m), where n(m,z) is the standard DM-only halo mass function
         #  DM_mass_func = hmf_200m(self.cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
-        DM_mass_func = self.mass_func(cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10))
+        DM_mass_func = self.mass_func(cosmo, np.atleast_1d(M), 1) / (np.atleast_1d(M)*np.log(10)) # changing it from log10 mass units to mass units
         return M * self._f_stell_noA(cosmo, M) * DM_mass_func 
      
     def _f_stell(self, cosmo, M):
